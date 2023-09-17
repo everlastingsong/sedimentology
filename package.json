@@ -1,0 +1,26 @@
+{
+  "name": "sedimentology",
+  "version": "0.0.1",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/everlastingsong/sedimentology.git"
+  },
+  "author": "yugure-orca",
+  "license": "MIT",
+  "homepage": "https://github.com/everlastingsong/sedimentology#readme",
+  "dependencies": {
+    "@bull-board/express": "^5.8.3",
+    "@solana/web3.js": "^1.78.5",
+    "bullmq": "^4.11.0",
+    "mariadb": "^3.2.1"
+  },
+  "devDependencies": {
+    "@types/node": "^16.11.7",
+    "typescript": "^4.5.5"
+  }
+}
