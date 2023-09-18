@@ -17,7 +17,7 @@ async function main() {
     host: 'localhost',
     user: 'root',
     password: 'password',
-    database: 'solana',
+    database: 'test',
     connectionLimit: 5,
     bigIntAsNumber: true, // number is safe
   });

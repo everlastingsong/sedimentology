@@ -5,12 +5,13 @@ import { BullMQAdapter } from "@bull-board/api/bullMQAdapter";
 import { ExpressAdapter } from "@bull-board/express";
 
 const queue = new Queue("my_queue");
+const queueBlockFetcher = new Queue("block_fetcher");
 
 const serverAdapter = new ExpressAdapter();
 serverAdapter.setBasePath('/admin/queues');
 
 const { addQueue, removeQueue, setQueues, replaceQueues } = createBullBoard({
-  queues: [new BullMQAdapter(queue)],
+  queues: [new BullMQAdapter(queue), new BullMQAdapter(queueBlockFetcher)],
   serverAdapter: serverAdapter,
 });
 
