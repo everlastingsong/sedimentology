@@ -119,17 +119,16 @@
     decimal.js "^10.3.1"
     tiny-invariant "^1.2.0"
 
-"@orca-so/whirlpools-sdk@0.11.4":
-  version "0.11.4"
-  resolved "https://registry.yarnpkg.com/@orca-so/whirlpools-sdk/-/whirlpools-sdk-0.11.4.tgz#928adddc517b534032f5fb8e63a84893a6cf6b50"
-  integrity sha512-ovKP8A2Z0nkN57upmo2Sax6eOvwzw6plUks4iMMcPGkrfBuifqZa9CKEhR2qqBE8oDThJJoYk7EW7PGKUfhSLg==
+"@orca-so/whirlpools-sdk@0.11.5":
+  version "0.11.5"
+  resolved "https://registry.yarnpkg.com/@orca-so/whirlpools-sdk/-/whirlpools-sdk-0.11.5.tgz#0eadbfcf34b24146e0a7f445e5f2110c653fb39b"
+  integrity sha512-gf3N+zpqIVN7yWYssOd/K5bdp8GLwU33ltyBVF8l81mcSkL7kqBVssrRMYVzVEUfQ2+3L88m7l+Qs3paQqQrsQ==
   dependencies:
     "@coral-xyz/anchor" "~0.27.0"
     "@orca-so/common-sdk" "^0.3.3"
     "@solana/spl-token" "^0.3.8"
     "@solana/web3.js" "^1.75.0"
     decimal.js "^10.3.1"
-    lodash.combinations "^18.11.1"
     tiny-invariant "^1.2.0"
 
 "@solana/buffer-layout-utils@^0.2.0":
@@ -858,11 +857,6 @@ jsonparse@^1.2.0:
   resolved "https://registry.yarnpkg.com/jsonparse/-/jsonparse-1.3.1.tgz#3f4dae4a91fac315f71062f8521cc239f1366280"
   integrity sha512-POQXvpdL69+CluYsillJ7SUhKvytYjW9vG/GKpnf+xP8UWgYEM/RaMzHHofbALDiKbbP1W8UEYmgGl39WkPZsg==
 
-lodash.combinations@^18.11.1:
-  version "18.11.1"
-  resolved "https://registry.yarnpkg.com/lodash.combinations/-/lodash.combinations-18.11.1.tgz#4b55cba7f01f6a8fd889a15fe6f57f0e61a77b4f"
-  integrity sha512-0jtulyUQA1My13JuMR23MHqsMk8pQswcy+fO0jTKRp41bi+dDWflv/Ct4qRW6CcbLkk2Qi3PZyzx+tqgqSYLug==
-
 lodash.defaults@^4.2.0:
   version "4.2.0"
   resolved "https://registry.yarnpkg.com/lodash.defaults/-/lodash.defaults-4.2.0.tgz#d09178716ffea4dde9e5fb7b37f6f0802274580c"
@@ -873,7 +867,7 @@ lodash.isarguments@^3.1.0:
   resolved "https://registry.yarnpkg.com/lodash.isarguments/-/lodash.isarguments-3.1.0.tgz#2f573d85c6a24289ff00663b491c1d338ff3458a"
   integrity sha512-chi4NHZlZqZD18a0imDHnZPrDeBbTtVN7GXMwuGdRH9qotxAjYs3aVLKc7zNOG9eddR5Ksd8rvFEBc9SsggPpg==
 
-lodash@^4, lodash@^4.17.11, lodash@^4.17.21:
+lodash@^4.17.11, lodash@^4.17.21:
   version "4.17.21"
   resolved "https://registry.yarnpkg.com/lodash/-/lodash-4.17.21.tgz#679591c564c3bffaae8454cf0b3df370c3d6911c"
   integrity sha512-v2kDEe57lecTulaDIuNTPy3Ry4gLGJ6Z1O3vE1krgXZNrsQ+LFTGHVxVjcXPs17LhbZVGedAJv8XZ1tvj5FvSg==

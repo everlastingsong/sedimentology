@@ -39,7 +39,7 @@ async function main() {
     const buffer = Buffer.from(data); // mariadb(mysql) prefer Buffer than Uint8Array...
     const compressed = Buffer.from(gzipSync(data));
 
-    // BINARY function is important!!
+    // use of BINARY function is important!!
     const res = await conn.query('INSERT INTO blobtable (data, compressed) VALUES (BINARY(?), BINARY(?))', [buffer, compressed]);
     console.log(res);
 

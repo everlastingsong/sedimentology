@@ -55,7 +55,7 @@ async function main() {
     }
 
     console.log("consumed");
-  }, { connection: redis, concurrency: 20 });
+  }, { connection: redis, concurrency: 10 });
 
   for (let i=0; i<5; i++) {
     console.log("enqueue jobs...");
@@ -69,7 +69,7 @@ async function main() {
       const enqueuedSlotSet = new Set<number>();
       enqueued.forEach(job => { enqueuedSlotSet.add(job.data); });
 
-      const rows = await db.query<Pick<Slot, "slot">[]>('SELECT slot FROM slots WHERE state = 0 ORDER BY slot ASC LIMIT 25');
+      const rows = await db.query<Pick<Slot, "slot">[]>('SELECT slot FROM slots WHERE state = 0 ORDER BY slot ASC LIMIT 100');
       rows.forEach(row => {
         if (!enqueuedSlotSet.has(row.slot)) {
           console.log("enqueue", row.slot, "to block_fetcher");

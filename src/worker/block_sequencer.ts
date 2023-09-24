@@ -59,7 +59,7 @@ async function main() {
     method: "post",
   });
 
-  await addNewSlots(database, solana, /*BLOCK_LIMIT*/ 200);
+  await addNewSlots(database, solana, BLOCK_LIMIT);
   await database.end();
 }
 
