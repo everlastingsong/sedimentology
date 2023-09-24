@@ -25,5 +25,15 @@ BEGIN
 END
 //
 
+CREATE PROCEDURE addPubkeyIfNotExists(pubkeyBase58 VARCHAR(48))
+BEGIN
+   DECLARE pubkeyId INT;
+   SELECT id into pubkeyId FROM pubkeys WHERE pubkey = pubkeyBase58;
+   IF pubkeyId IS NULL THEN
+     INSERT INTO pubkeys (pubkey) VALUES (pubkeyBase58) ON DUPLICATE KEY UPDATE id = id;
+   END IF;
+END
+//
+
 */
 
