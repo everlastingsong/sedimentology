@@ -45,7 +45,7 @@ export async function addNewSlots(database: Connection, solana: AxiosInstance, l
   await database.commit();
 }
 
-
+/*
 import { DB_CONNECTION_CONFIG, SOLANA_RPC_URL } from "../constants";
 import { createConnection } from "mariadb";
 import axios from "axios";
@@ -64,3 +64,4 @@ async function main() {
 }
 
 main();
+*/
