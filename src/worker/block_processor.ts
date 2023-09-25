@@ -44,7 +44,7 @@ export async function processBlock(database: Connection, solana: AxiosInstance, 
 
   const blockData = json.result;
 
-  console.log("transactions", blockData.transactions.length);
+  //console.log("transactions", blockData.transactions.length);
 
   const touchedPubkeys = new Set<string>();
   const processedTransactions = [];
@@ -178,9 +178,8 @@ export async function processBlock(database: Connection, solana: AxiosInstance, 
 
   });
 
-  console.log("touchedPubkeys", touchedPubkeys.size);
-  console.log("processedTransactions", processedTransactions.length);
-
+  //console.log("touchedPubkeys", touchedPubkeys.size);
+  //console.log("processedTransactions", processedTransactions.length);
 
   // add pubkeys
   // anyway, we need to add pubkeys, so we do it outside of transaction for parallel processing
@@ -208,12 +207,14 @@ export async function processBlock(database: Connection, solana: AxiosInstance, 
   }
   for (const tx of processedTransactions) {
     await Promise.all(tx.whirlpoolInstructions.map((ix: DecodedWhirlpoolInstruction, order) => {
-      console.log("ix", tx.txid, order, ix.name);
+    //  console.log("ix", tx.txid, order, ix.name);
       return insertInstruction(tx.txid, order, ix, database);
     }));
   }
   await database.query("UPDATE slots SET state = ? WHERE slot = ?", [SlotProcessingState.Processed, slot]);
   await database.commit();
+
+  console.log(`processed slot=${slot}`, `${processedTransactions.length}/${blockData.transactions.length}`, `${processedTransactions.reduce((sum, tx) => sum + tx.whirlpoolInstructions.length, 0)} ix`);
 }
 
 async function insertInstruction(txid: BigInt, order: number, ix: DecodedWhirlpoolInstruction, database: Connection) {
