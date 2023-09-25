@@ -211,6 +211,8 @@ export async function processBlock(database: Connection, solana: AxiosInstance, 
       return insertInstruction(tx.txid, order, ix, database);
     }));
   }
+
+  await database.query('DELETE FROM blocks WHERE slot = ?', [slot]);
   await database.query("UPDATE slots SET state = ? WHERE slot = ?", [SlotProcessingState.Processed, slot]);
   await database.commit();
 
