@@ -184,6 +184,7 @@ export async function processBlock(database: Connection, solana: AxiosInstance, 
   await database.batch("INSERT INTO balances (txid, account, pre, post) VALUES (?, fromPubkeyBase58(?), ?, ?)", processedTransactions.flatMap((tx) => tx.balances.map((b) => [tx.txid, b.account, b.pre, b.post])));
   for (const tx of processedTransactions) {
     await Promise.all(tx.whirlpoolInstructions.map((ix: DecodedWhirlpoolInstruction, order) => {
+      console.log("ix", tx.txid, order, ix.name);
       return insertInstruction(tx.txid, order, ix, database);
     }));
   }
