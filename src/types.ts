@@ -1,6 +1,7 @@
 export enum SlotProcessingState {
   Added = 0,
   Fetched = 1,
+  Processed = 2,
 }
 
 export type State = {

@@ -165,8 +165,8 @@ export async function processBlock(database: Connection, solana: AxiosInstance, 
 
   });
 
-  console.log("touchedPubkeys", touchedPubkeys);
-  console.log("processedTransactions", processedTransactions);
+  console.log("touchedPubkeys", touchedPubkeys.size);
+  console.log("processedTransactions", processedTransactions.length);
 
 
   // add pubkeys
@@ -180,22 +180,27 @@ export async function processBlock(database: Connection, solana: AxiosInstance, 
   prepared.close();
 
   await database.beginTransaction();
-  await database.batch("INSERT INTO txs (txid, signature, payer) VALUES (?, ?, fromPubkeyBase58(?))", processedTransactions.map((tx) => [tx.txid, tx.signature, tx.payer]));
-  await database.batch("INSERT INTO balances (txid, account, pre, post) VALUES (?, fromPubkeyBase58(?), ?, ?)", processedTransactions.flatMap((tx) => tx.balances.map((b) => [tx.txid, b.account, b.pre, b.post])));
+  if (processedTransactions.length > 0) {
+    await database.batch(
+      "INSERT INTO txs (txid, signature, payer) VALUES (?, ?, fromPubkeyBase58(?))",
+      processedTransactions.map((tx) => [tx.txid, tx.signature, tx.payer])
+    );
+  }
+  const balances = processedTransactions.flatMap((tx) => tx.balances.map((b) => [tx.txid, b.account, b.pre, b.post]));
+  if (balances.length > 0) {
+    await database.batch(
+      "INSERT INTO balances (txid, account, pre, post) VALUES (?, fromPubkeyBase58(?), ?, ?)",
+      balances
+    );
+  }
   for (const tx of processedTransactions) {
     await Promise.all(tx.whirlpoolInstructions.map((ix: DecodedWhirlpoolInstruction, order) => {
       console.log("ix", tx.txid, order, ix.name);
       return insertInstruction(tx.txid, order, ix, database);
     }));
   }
+  await database.query("UPDATE slots SET state = ? WHERE slot = ?", [SlotProcessingState.Processed, slot]);
   await database.commit();
-
-/*
-  await database.beginTransaction();
-  await database.query("UPDATE slots SET blockHeight = ?, blockTime = ?, state = ? WHERE slot = ?", [blockHeight, blockTime, SlotProcessingState.Fetched, slot]);
-  await database.query("INSERT INTO blocks (slot, gzJsonString) VALUES (?, BINARY(?))", [slot, Buffer.from(gzJsonString)]);
-  await database.commit();
-  */
 }
 
 async function insertInstruction(txid: BigInt, order: number, ix: DecodedWhirlpoolInstruction, database: Connection) {
@@ -745,7 +750,7 @@ async function insertInstruction(txid: BigInt, order: number, ix: DecodedWhirlpo
   }
 }
 
-
+/*
 import { DB_CONNECTION_CONFIG, SOLANA_RPC_URL } from "../constants";
 import { createConnection } from "mariadb";
 import axios from "axios";
@@ -762,3 +767,4 @@ async function main() {
 }
 
 main();
+*/
