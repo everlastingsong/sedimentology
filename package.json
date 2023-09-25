@@ -17,7 +17,7 @@
     "@bull-board/express": "^5.8.3",
     "@orca-so/whirlpools-sdk": "0.11.5",
     "@solana/web3.js": "^1.78.5",
-    "@yugure-orca/whirlpool-tx-decoder": "^0.0.2",
+    "@yugure-orca/whirlpool-tx-decoder": "^0.0.3",
     "axios": "^1.5.0",
     "bullmq": "^4.11.0",
     "fflate": "^0.8.0",
