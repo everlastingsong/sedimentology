@@ -294,7 +294,7 @@ async function insertInstruction(txid: BigInt, order: number, ix: DecodedWhirlpo
         // no transfer
       ]);
     case "openPositionWithMetadata":
-      return database.query(buildSQL(ix.name, 2, 11, 0), [
+      return database.query(buildSQL(ix.name, 2, 13, 0), [
         txid,
         order,
         // data
@@ -312,8 +312,8 @@ async function insertInstruction(txid: BigInt, order: number, ix: DecodedWhirlpo
         ix.accounts.systemProgram.toBase58(),
         ix.accounts.rent.toBase58(),
         ix.accounts.associatedTokenProgram.toBase58(),
-        // TODO: metadataProgram
-        // TODO: metadataUpdateAuth
+        ix.accounts.metadataProgram.toBase58(),
+        ix.accounts.metadataUpdateAuth.toBase58(),
         // no transfer
       ]);
     case "increaseLiquidity":
