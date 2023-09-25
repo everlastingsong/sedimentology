@@ -75,15 +75,24 @@ export async function processBlock(database: Connection, solana: AxiosInstance, 
 
     // FOR pubkeys
     touchedPubkeys.add(payer);
-    whirlpoolInstructions.forEach((ix) => Object.values(ix.accounts).forEach((pubkey) => touchedPubkeys.add(pubkey.toBase58())));
+    whirlpoolInstructions.forEach((ix) => {
+      switch (ix.name) {
+        case "initializeConfig":
+          touchedPubkeys.add(ix.data.feeAuthority.toBase58());
+          touchedPubkeys.add(ix.data.collectProtocolFeesAuthority.toBase58());
+          touchedPubkeys.add(ix.data.rewardEmissionsSuperAuthority.toBase58());
+          // no break
+        default:
+          Object.values(ix.accounts).forEach((pubkey) => touchedPubkeys.add(pubkey.toBase58()));
+      }
+    });
 
     // FOR balances
     const touchedVaultPubkeys = new Set<string>();
     whirlpoolInstructions.forEach((ix) => {
       switch (ix.name) {
         case "initializePool":
-          touchedVaultPubkeys.add(ix.accounts.tokenVaultA.toBase58());
-          touchedVaultPubkeys.add(ix.accounts.tokenVaultB.toBase58());
+          // This instruction does not affect the token balance and preTokenBalance cannot be obtained.
           break;
         case "increaseLiquidity":
         case "decreaseLiquidity":
@@ -97,6 +106,8 @@ export async function processBlock(database: Connection, solana: AxiosInstance, 
           break;
         case "initializeReward":
         case "setRewardEmissions":
+          // This instruction does not affect the token balance and preTokenBalance cannot be obtained.
+          break;
         case "collectReward":
           touchedVaultPubkeys.add(ix.accounts.rewardVault.toBase58());
           break;

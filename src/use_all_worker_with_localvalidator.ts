@@ -149,7 +149,7 @@ async function main() {
       const enqueuedSlotSet = new Set<number>();
       enqueued.forEach(job => { enqueuedSlotSet.add(job.data); });
 
-      const rows = await db.query<Pick<Slot, "slot">[]>('SELECT slot FROM slots WHERE state = 1 ORDER BY slot ASC LIMIT 100');
+      const rows = await db.query<Pick<Slot, "slot">[]>('SELECT slot FROM slots WHERE state = 1 ORDER BY slot ASC LIMIT 1000');
       rows.forEach(row => {
         if (!enqueuedSlotSet.has(row.slot)) {
           queueBlockProcessor.add(`block_processor(${row.slot})`, row.slot);
