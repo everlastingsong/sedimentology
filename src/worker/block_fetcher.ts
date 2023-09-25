@@ -44,7 +44,7 @@ export async function fetchBlock(database: Connection, solana: AxiosInstance, sl
     decompress: true, // axios automatically decompresses gzip response
   });
 
-  const originalData = response.data as string;
+  const originalData = (response.data as string).trim(); // remove leading & trailing whitespaces
   const data = JSON.parse(originalData);
 
   if (data.error) {
