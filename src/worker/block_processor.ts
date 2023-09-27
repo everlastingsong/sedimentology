@@ -15,8 +15,7 @@ import { LRUCache } from "lru-cache";
 // change BigNumber config to never use exponential notation
 BigNumber.config({ EXPONENTIAL_AT: 1e9 });
 
-const WHIRLPOOL_PUBKEY_BASE58 = "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc";
-const WHIRLPOOL_PUBKEY = new PublicKey(WHIRLPOOL_PUBKEY_BASE58);
+const WHIRLPOOL_PUBKEY = "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc";
 
 const pubkeyLRUCache = new LRUCache<string, boolean>({ max: 10_000 });
 
@@ -78,12 +77,12 @@ export async function processBlock(database: Connection, solana: AxiosInstance, 
     whirlpoolInstructions.forEach((ix) => {
       switch (ix.name) {
         case "initializeConfig":
-          touchedPubkeys.add(ix.data.feeAuthority.toBase58());
-          touchedPubkeys.add(ix.data.collectProtocolFeesAuthority.toBase58());
-          touchedPubkeys.add(ix.data.rewardEmissionsSuperAuthority.toBase58());
+          touchedPubkeys.add(ix.data.feeAuthority);
+          touchedPubkeys.add(ix.data.collectProtocolFeesAuthority);
+          touchedPubkeys.add(ix.data.rewardEmissionsSuperAuthority);
           // no break
         default:
-          Object.values(ix.accounts).forEach((pubkey) => touchedPubkeys.add(pubkey.toBase58()));
+          Object.values(ix.accounts).forEach((pubkey) => touchedPubkeys.add(pubkey));
       }
     });
 
@@ -96,30 +95,30 @@ export async function processBlock(database: Connection, solana: AxiosInstance, 
           break;
         case "increaseLiquidity":
         case "decreaseLiquidity":
-          touchedVaultPubkeys.add(ix.accounts.tokenVaultA.toBase58());
-          touchedVaultPubkeys.add(ix.accounts.tokenVaultB.toBase58());
+          touchedVaultPubkeys.add(ix.accounts.tokenVaultA);
+          touchedVaultPubkeys.add(ix.accounts.tokenVaultB);
           break;
         case "collectFees":
         case "collectProtocolFees":
-          touchedVaultPubkeys.add(ix.accounts.tokenVaultA.toBase58());
-          touchedVaultPubkeys.add(ix.accounts.tokenVaultB.toBase58());
+          touchedVaultPubkeys.add(ix.accounts.tokenVaultA);
+          touchedVaultPubkeys.add(ix.accounts.tokenVaultB);
           break;
         case "initializeReward":
         case "setRewardEmissions":
           // This instruction does not affect the token balance and preTokenBalance cannot be obtained.
           break;
         case "collectReward":
-          touchedVaultPubkeys.add(ix.accounts.rewardVault.toBase58());
+          touchedVaultPubkeys.add(ix.accounts.rewardVault);
           break;
         case "swap":
-          touchedVaultPubkeys.add(ix.accounts.tokenVaultA.toBase58());
-          touchedVaultPubkeys.add(ix.accounts.tokenVaultB.toBase58());
+          touchedVaultPubkeys.add(ix.accounts.tokenVaultA);
+          touchedVaultPubkeys.add(ix.accounts.tokenVaultB);
           break;
         case "twoHopSwap":
-          touchedVaultPubkeys.add(ix.accounts.tokenVaultOneA.toBase58());
-          touchedVaultPubkeys.add(ix.accounts.tokenVaultOneB.toBase58());
-          touchedVaultPubkeys.add(ix.accounts.tokenVaultTwoA.toBase58());
-          touchedVaultPubkeys.add(ix.accounts.tokenVaultTwoB.toBase58());
+          touchedVaultPubkeys.add(ix.accounts.tokenVaultOneA);
+          touchedVaultPubkeys.add(ix.accounts.tokenVaultOneB);
+          touchedVaultPubkeys.add(ix.accounts.tokenVaultTwoA);
+          touchedVaultPubkeys.add(ix.accounts.tokenVaultTwoB);
           break;
         case "adminIncreaseLiquidity":
         case "closeBundledPosition":
@@ -219,7 +218,7 @@ export async function processBlock(database: Connection, solana: AxiosInstance, 
   console.log(`processed slot=${slot}`, `${processedTransactions.length}/${blockData.transactions.length}`, `${processedTransactions.reduce((sum, tx) => sum + tx.whirlpoolInstructions.length, 0)} ix`);
 }
 
-async function insertInstruction(txid: BigInt, order: number, ix: DecodedWhirlpoolInstruction, database: Connection) {
+export async function insertInstruction(txid: BigInt, order: number, ix: DecodedWhirlpoolInstruction, database: Connection) {
   const buildSQL = (ixName: string, numData: number, numKey: number, numTransfer: number): string => {
     const table = `ixs${ixName.charAt(0).toUpperCase() + ixName.slice(1)}`;
     const data = Array(numData).fill(", ?").join("");
@@ -240,20 +239,20 @@ async function insertInstruction(txid: BigInt, order: number, ix: DecodedWhirlpo
         ix.data.amountSpecifiedIsInput,
         ix.data.aToB,
         // key
-        ix.accounts.tokenProgram.toBase58(),
-        ix.accounts.tokenAuthority.toBase58(),
-        ix.accounts.whirlpool.toBase58(),
-        ix.accounts.tokenOwnerAccountA.toBase58(),
-        ix.accounts.tokenVaultA.toBase58(),
-        ix.accounts.tokenOwnerAccountB.toBase58(),
-        ix.accounts.tokenVaultB.toBase58(),
-        ix.accounts.tickArray0.toBase58(),
-        ix.accounts.tickArray1.toBase58(),
-        ix.accounts.tickArray2.toBase58(),
-        ix.accounts.oracle.toBase58(),
+        ix.accounts.tokenProgram,
+        ix.accounts.tokenAuthority,
+        ix.accounts.whirlpool,
+        ix.accounts.tokenOwnerAccountA,
+        ix.accounts.tokenVaultA,
+        ix.accounts.tokenOwnerAccountB,
+        ix.accounts.tokenVaultB,
+        ix.accounts.tickArray0,
+        ix.accounts.tickArray1,
+        ix.accounts.tickArray2,
+        ix.accounts.oracle,
         // transfer
-        ix.transfers[0].data.amount,
-        ix.transfers[1].data.amount,
+        ix.transfers[0],
+        ix.transfers[1],
       ]);
     case "twoHopSwap":
       return database.query(buildSQL(ix.name, 7, 20, 4), [
@@ -268,31 +267,31 @@ async function insertInstruction(txid: BigInt, order: number, ix: DecodedWhirlpo
         BigInt(ix.data.sqrtPriceLimitOne.toString()),
         BigInt(ix.data.sqrtPriceLimitTwo.toString()),
         // key
-        ix.accounts.tokenProgram.toBase58(),
-        ix.accounts.tokenAuthority.toBase58(),
-        ix.accounts.whirlpoolOne.toBase58(),
-        ix.accounts.whirlpoolTwo.toBase58(),
-        ix.accounts.tokenOwnerAccountOneA.toBase58(),
-        ix.accounts.tokenVaultOneA.toBase58(),
-        ix.accounts.tokenOwnerAccountOneB.toBase58(),
-        ix.accounts.tokenVaultOneB.toBase58(),
-        ix.accounts.tokenOwnerAccountTwoA.toBase58(),
-        ix.accounts.tokenVaultTwoA.toBase58(),
-        ix.accounts.tokenOwnerAccountTwoB.toBase58(),
-        ix.accounts.tokenVaultTwoB.toBase58(),
-        ix.accounts.tickArrayOne0.toBase58(),
-        ix.accounts.tickArrayOne1.toBase58(),
-        ix.accounts.tickArrayOne2.toBase58(),
-        ix.accounts.tickArrayTwo0.toBase58(),
-        ix.accounts.tickArrayTwo1.toBase58(),
-        ix.accounts.tickArrayTwo2.toBase58(),
-        ix.accounts.oracleOne.toBase58(),
-        ix.accounts.oracleTwo.toBase58(),
+        ix.accounts.tokenProgram,
+        ix.accounts.tokenAuthority,
+        ix.accounts.whirlpoolOne,
+        ix.accounts.whirlpoolTwo,
+        ix.accounts.tokenOwnerAccountOneA,
+        ix.accounts.tokenVaultOneA,
+        ix.accounts.tokenOwnerAccountOneB,
+        ix.accounts.tokenVaultOneB,
+        ix.accounts.tokenOwnerAccountTwoA,
+        ix.accounts.tokenVaultTwoA,
+        ix.accounts.tokenOwnerAccountTwoB,
+        ix.accounts.tokenVaultTwoB,
+        ix.accounts.tickArrayOne0,
+        ix.accounts.tickArrayOne1,
+        ix.accounts.tickArrayOne2,
+        ix.accounts.tickArrayTwo0,
+        ix.accounts.tickArrayTwo1,
+        ix.accounts.tickArrayTwo2,
+        ix.accounts.oracleOne,
+        ix.accounts.oracleTwo,
         // transfer
-        ix.transfers[0].data.amount,
-        ix.transfers[1].data.amount,
-        ix.transfers[2].data.amount,
-        ix.transfers[3].data.amount,
+        ix.transfers[0],
+        ix.transfers[1],
+        ix.transfers[2],
+        ix.transfers[3],
       ]);
     case "openPosition":
       return database.query(buildSQL(ix.name, 2, 10, 0), [
@@ -302,16 +301,16 @@ async function insertInstruction(txid: BigInt, order: number, ix: DecodedWhirlpo
         ix.data.tickLowerIndex,
         ix.data.tickUpperIndex,
         // key
-        ix.accounts.funder.toBase58(),
-        ix.accounts.owner.toBase58(),
-        ix.accounts.position.toBase58(),
-        ix.accounts.positionMint.toBase58(),
-        ix.accounts.positionTokenAccount.toBase58(),
-        ix.accounts.whirlpool.toBase58(),
-        ix.accounts.tokenProgram.toBase58(),
-        ix.accounts.systemProgram.toBase58(),
-        ix.accounts.rent.toBase58(),
-        ix.accounts.associatedTokenProgram.toBase58(),
+        ix.accounts.funder,
+        ix.accounts.owner,
+        ix.accounts.position,
+        ix.accounts.positionMint,
+        ix.accounts.positionTokenAccount,
+        ix.accounts.whirlpool,
+        ix.accounts.tokenProgram,
+        ix.accounts.systemProgram,
+        ix.accounts.rent,
+        ix.accounts.associatedTokenProgram,
         // no transfer
       ]);
     case "openPositionWithMetadata":
@@ -322,19 +321,19 @@ async function insertInstruction(txid: BigInt, order: number, ix: DecodedWhirlpo
         ix.data.tickLowerIndex,
         ix.data.tickUpperIndex,
         // key
-        ix.accounts.funder.toBase58(),
-        ix.accounts.owner.toBase58(),
-        ix.accounts.position.toBase58(),
-        ix.accounts.positionMint.toBase58(),
-        ix.accounts.positionMetadataAccount.toBase58(),
-        ix.accounts.positionTokenAccount.toBase58(),
-        ix.accounts.whirlpool.toBase58(),
-        ix.accounts.tokenProgram.toBase58(),
-        ix.accounts.systemProgram.toBase58(),
-        ix.accounts.rent.toBase58(),
-        ix.accounts.associatedTokenProgram.toBase58(),
-        ix.accounts.metadataProgram.toBase58(),
-        ix.accounts.metadataUpdateAuth.toBase58(),
+        ix.accounts.funder,
+        ix.accounts.owner,
+        ix.accounts.position,
+        ix.accounts.positionMint,
+        ix.accounts.positionMetadataAccount,
+        ix.accounts.positionTokenAccount,
+        ix.accounts.whirlpool,
+        ix.accounts.tokenProgram,
+        ix.accounts.systemProgram,
+        ix.accounts.rent,
+        ix.accounts.associatedTokenProgram,
+        ix.accounts.metadataProgram,
+        ix.accounts.metadataUpdateAuth,
         // no transfer
       ]);
     case "increaseLiquidity":
@@ -346,20 +345,20 @@ async function insertInstruction(txid: BigInt, order: number, ix: DecodedWhirlpo
         BigInt(ix.data.tokenMaxA.toString()),
         BigInt(ix.data.tokenMaxB.toString()),
         // key
-        ix.accounts.whirlpool.toBase58(),
-        ix.accounts.tokenProgram.toBase58(),
-        ix.accounts.positionAuthority.toBase58(),
-        ix.accounts.position.toBase58(),
-        ix.accounts.positionTokenAccount.toBase58(),
-        ix.accounts.tokenOwnerAccountA.toBase58(),
-        ix.accounts.tokenOwnerAccountB.toBase58(),
-        ix.accounts.tokenVaultA.toBase58(),
-        ix.accounts.tokenVaultB.toBase58(),
-        ix.accounts.tickArrayLower.toBase58(),
-        ix.accounts.tickArrayUpper.toBase58(),
+        ix.accounts.whirlpool,
+        ix.accounts.tokenProgram,
+        ix.accounts.positionAuthority,
+        ix.accounts.position,
+        ix.accounts.positionTokenAccount,
+        ix.accounts.tokenOwnerAccountA,
+        ix.accounts.tokenOwnerAccountB,
+        ix.accounts.tokenVaultA,
+        ix.accounts.tokenVaultB,
+        ix.accounts.tickArrayLower,
+        ix.accounts.tickArrayUpper,
         // transfer
-        ix.transfers[0].data.amount,
-        ix.transfers[1].data.amount,
+        ix.transfers[0],
+        ix.transfers[1],
       ]);
     case "decreaseLiquidity":
       return database.query(buildSQL(ix.name, 3, 11, 2), [
@@ -370,20 +369,20 @@ async function insertInstruction(txid: BigInt, order: number, ix: DecodedWhirlpo
         BigInt(ix.data.tokenMinA.toString()),
         BigInt(ix.data.tokenMinB.toString()),
         // key
-        ix.accounts.whirlpool.toBase58(),
-        ix.accounts.tokenProgram.toBase58(),
-        ix.accounts.positionAuthority.toBase58(),
-        ix.accounts.position.toBase58(),
-        ix.accounts.positionTokenAccount.toBase58(),
-        ix.accounts.tokenOwnerAccountA.toBase58(),
-        ix.accounts.tokenOwnerAccountB.toBase58(),
-        ix.accounts.tokenVaultA.toBase58(),
-        ix.accounts.tokenVaultB.toBase58(),
-        ix.accounts.tickArrayLower.toBase58(),
-        ix.accounts.tickArrayUpper.toBase58(),
+        ix.accounts.whirlpool,
+        ix.accounts.tokenProgram,
+        ix.accounts.positionAuthority,
+        ix.accounts.position,
+        ix.accounts.positionTokenAccount,
+        ix.accounts.tokenOwnerAccountA,
+        ix.accounts.tokenOwnerAccountB,
+        ix.accounts.tokenVaultA,
+        ix.accounts.tokenVaultB,
+        ix.accounts.tickArrayLower,
+        ix.accounts.tickArrayUpper,
         // transfer
-        ix.transfers[0].data.amount,
-        ix.transfers[1].data.amount,
+        ix.transfers[0],
+        ix.transfers[1],
       ]);
     case "updateFeesAndRewards":
       return database.query(buildSQL(ix.name, 0, 4, 0), [
@@ -391,10 +390,10 @@ async function insertInstruction(txid: BigInt, order: number, ix: DecodedWhirlpo
         order,
         // no data
         // key
-        ix.accounts.whirlpool.toBase58(),
-        ix.accounts.position.toBase58(),
-        ix.accounts.tickArrayLower.toBase58(),
-        ix.accounts.tickArrayUpper.toBase58(),
+        ix.accounts.whirlpool,
+        ix.accounts.position,
+        ix.accounts.tickArrayLower,
+        ix.accounts.tickArrayUpper,
         // no transfer
       ]);
     case "collectFees":
@@ -403,18 +402,18 @@ async function insertInstruction(txid: BigInt, order: number, ix: DecodedWhirlpo
         order,
         // no data
         // key
-        ix.accounts.whirlpool.toBase58(),
-        ix.accounts.positionAuthority.toBase58(),
-        ix.accounts.position.toBase58(),
-        ix.accounts.positionTokenAccount.toBase58(),
-        ix.accounts.tokenOwnerAccountA.toBase58(),
-        ix.accounts.tokenVaultA.toBase58(),
-        ix.accounts.tokenOwnerAccountB.toBase58(),
-        ix.accounts.tokenVaultB.toBase58(),
-        ix.accounts.tokenProgram.toBase58(),
+        ix.accounts.whirlpool,
+        ix.accounts.positionAuthority,
+        ix.accounts.position,
+        ix.accounts.positionTokenAccount,
+        ix.accounts.tokenOwnerAccountA,
+        ix.accounts.tokenVaultA,
+        ix.accounts.tokenOwnerAccountB,
+        ix.accounts.tokenVaultB,
+        ix.accounts.tokenProgram,
         // transfer
-        ix.transfers[0].data.amount,
-        ix.transfers[1].data.amount,
+        ix.transfers[0],
+        ix.transfers[1],
       ]);
     case "collectReward":
       return database.query(buildSQL(ix.name, 1, 7, 1), [
@@ -423,15 +422,15 @@ async function insertInstruction(txid: BigInt, order: number, ix: DecodedWhirlpo
         // data
         ix.data.rewardIndex,
         // key
-        ix.accounts.whirlpool.toBase58(),
-        ix.accounts.positionAuthority.toBase58(),
-        ix.accounts.position.toBase58(),
-        ix.accounts.positionTokenAccount.toBase58(),
-        ix.accounts.rewardOwnerAccount.toBase58(),
-        ix.accounts.rewardVault.toBase58(),
-        ix.accounts.tokenProgram.toBase58(),
+        ix.accounts.whirlpool,
+        ix.accounts.positionAuthority,
+        ix.accounts.position,
+        ix.accounts.positionTokenAccount,
+        ix.accounts.rewardOwnerAccount,
+        ix.accounts.rewardVault,
+        ix.accounts.tokenProgram,
         // transfer
-        ix.transfers[0].data.amount,
+        ix.transfers[0],
       ]);
     case "closePosition":
       return database.query(buildSQL(ix.name, 0, 6, 0), [
@@ -439,12 +438,12 @@ async function insertInstruction(txid: BigInt, order: number, ix: DecodedWhirlpo
         order,
         // no data
         // key
-        ix.accounts.positionAuthority.toBase58(),
-        ix.accounts.receiver.toBase58(),
-        ix.accounts.position.toBase58(),
-        ix.accounts.positionMint.toBase58(),
-        ix.accounts.positionTokenAccount.toBase58(),
-        ix.accounts.tokenProgram.toBase58(),
+        ix.accounts.positionAuthority,
+        ix.accounts.receiver,
+        ix.accounts.position,
+        ix.accounts.positionMint,
+        ix.accounts.positionTokenAccount,
+        ix.accounts.tokenProgram,
         // no transfer
       ]);
     case "collectProtocolFees":
@@ -453,17 +452,17 @@ async function insertInstruction(txid: BigInt, order: number, ix: DecodedWhirlpo
         order,
         // no data
         // key
-        ix.accounts.whirlpoolsConfig.toBase58(),
-        ix.accounts.whirlpool.toBase58(),
-        ix.accounts.collectProtocolFeesAuthority.toBase58(),
-        ix.accounts.tokenVaultA.toBase58(),
-        ix.accounts.tokenVaultB.toBase58(),
-        ix.accounts.tokenDestinationA.toBase58(),
-        ix.accounts.tokenDestinationB.toBase58(),
-        ix.accounts.tokenProgram.toBase58(),
+        ix.accounts.whirlpoolsConfig,
+        ix.accounts.whirlpool,
+        ix.accounts.collectProtocolFeesAuthority,
+        ix.accounts.tokenVaultA,
+        ix.accounts.tokenVaultB,
+        ix.accounts.tokenDestinationA,
+        ix.accounts.tokenDestinationB,
+        ix.accounts.tokenProgram,
         // transfer
-        ix.transfers[0].data.amount,
-        ix.transfers[1].data.amount,
+        ix.transfers[0],
+        ix.transfers[1],
       ]);
     case "adminIncreaseLiquidity":
       return database.query(buildSQL(ix.name, 1, 3, 0), [
@@ -472,9 +471,9 @@ async function insertInstruction(txid: BigInt, order: number, ix: DecodedWhirlpo
         // data
         BigInt(ix.data.liquidity.toString()),
         // key
-        ix.accounts.whirlpoolsConfig.toBase58(),
-        ix.accounts.whirlpool.toBase58(),
-        ix.accounts.authority.toBase58(),
+        ix.accounts.whirlpoolsConfig,
+        ix.accounts.whirlpool,
+        ix.accounts.authority,
         // no transfer
       ]);
     case "initializeConfig":
@@ -484,13 +483,13 @@ async function insertInstruction(txid: BigInt, order: number, ix: DecodedWhirlpo
         // data
         ix.data.defaultProtocolFeeRate,
         // data as key
-        ix.data.feeAuthority.toBase58(),
-        ix.data.collectProtocolFeesAuthority.toBase58(),
-        ix.data.rewardEmissionsSuperAuthority.toBase58(),
+        ix.data.feeAuthority,
+        ix.data.collectProtocolFeesAuthority,
+        ix.data.rewardEmissionsSuperAuthority,
         // key
-        ix.accounts.whirlpoolsConfig.toBase58(),
-        ix.accounts.funder.toBase58(),
-        ix.accounts.systemProgram.toBase58(),
+        ix.accounts.whirlpoolsConfig,
+        ix.accounts.funder,
+        ix.accounts.systemProgram,
         // no transfer
       ]);
     case "initializeFeeTier":
@@ -501,11 +500,11 @@ async function insertInstruction(txid: BigInt, order: number, ix: DecodedWhirlpo
         ix.data.tickSpacing,
         ix.data.defaultFeeRate,
         // key
-        ix.accounts.whirlpoolsConfig.toBase58(),
-        ix.accounts.feeTier.toBase58(),
-        ix.accounts.funder.toBase58(),
-        ix.accounts.feeAuthority.toBase58(),
-        ix.accounts.systemProgram.toBase58(),
+        ix.accounts.whirlpoolsConfig,
+        ix.accounts.feeTier,
+        ix.accounts.funder,
+        ix.accounts.feeAuthority,
+        ix.accounts.systemProgram,
         // no transfer
       ]);
     case "initializePool":
@@ -516,17 +515,17 @@ async function insertInstruction(txid: BigInt, order: number, ix: DecodedWhirlpo
         ix.data.tickSpacing,
         BigInt(ix.data.initialSqrtPrice.toString()),
         // key
-        ix.accounts.whirlpoolsConfig.toBase58(),
-        ix.accounts.tokenMintA.toBase58(),
-        ix.accounts.tokenMintB.toBase58(),
-        ix.accounts.funder.toBase58(),
-        ix.accounts.whirlpool.toBase58(),
-        ix.accounts.tokenVaultA.toBase58(),
-        ix.accounts.tokenVaultB.toBase58(),
-        ix.accounts.feeTier.toBase58(),
-        ix.accounts.tokenProgram.toBase58(),
-        ix.accounts.systemProgram.toBase58(),
-        ix.accounts.rent.toBase58(),
+        ix.accounts.whirlpoolsConfig,
+        ix.accounts.tokenMintA,
+        ix.accounts.tokenMintB,
+        ix.accounts.funder,
+        ix.accounts.whirlpool,
+        ix.accounts.tokenVaultA,
+        ix.accounts.tokenVaultB,
+        ix.accounts.feeTier,
+        ix.accounts.tokenProgram,
+        ix.accounts.systemProgram,
+        ix.accounts.rent,
         // no transfer
       ]);
     case "initializePositionBundle":
@@ -535,15 +534,15 @@ async function insertInstruction(txid: BigInt, order: number, ix: DecodedWhirlpo
         order,
         // no data
         // key
-        ix.accounts.positionBundle.toBase58(),
-        ix.accounts.positionBundleMint.toBase58(),
-        ix.accounts.positionBundleTokenAccount.toBase58(),
-        ix.accounts.positionBundleOwner.toBase58(),
-        ix.accounts.funder.toBase58(),
-        ix.accounts.tokenProgram.toBase58(),
-        ix.accounts.systemProgram.toBase58(),
-        ix.accounts.rent.toBase58(),
-        ix.accounts.associatedTokenProgram.toBase58(),
+        ix.accounts.positionBundle,
+        ix.accounts.positionBundleMint,
+        ix.accounts.positionBundleTokenAccount,
+        ix.accounts.positionBundleOwner,
+        ix.accounts.funder,
+        ix.accounts.tokenProgram,
+        ix.accounts.systemProgram,
+        ix.accounts.rent,
+        ix.accounts.associatedTokenProgram,
         // no transfer
       ]);
     case "initializePositionBundleWithMetadata":
@@ -552,18 +551,18 @@ async function insertInstruction(txid: BigInt, order: number, ix: DecodedWhirlpo
         order,
         // no data
         // key
-        ix.accounts.positionBundle.toBase58(),
-        ix.accounts.positionBundleMint.toBase58(),
-        ix.accounts.positionBundleMetadata.toBase58(),
-        ix.accounts.positionBundleTokenAccount.toBase58(),
-        ix.accounts.positionBundleOwner.toBase58(),
-        ix.accounts.funder.toBase58(),
-        ix.accounts.metadataUpdateAuth.toBase58(),
-        ix.accounts.tokenProgram.toBase58(),
-        ix.accounts.systemProgram.toBase58(),
-        ix.accounts.rent.toBase58(),
-        ix.accounts.associatedTokenProgram.toBase58(),
-        ix.accounts.metadataProgram.toBase58(),
+        ix.accounts.positionBundle,
+        ix.accounts.positionBundleMint,
+        ix.accounts.positionBundleMetadata,
+        ix.accounts.positionBundleTokenAccount,
+        ix.accounts.positionBundleOwner,
+        ix.accounts.funder,
+        ix.accounts.metadataUpdateAuth,
+        ix.accounts.tokenProgram,
+        ix.accounts.systemProgram,
+        ix.accounts.rent,
+        ix.accounts.associatedTokenProgram,
+        ix.accounts.metadataProgram,
         // no transfer
       ]);
     case "initializeReward":
@@ -573,14 +572,14 @@ async function insertInstruction(txid: BigInt, order: number, ix: DecodedWhirlpo
         // data
         ix.data.rewardIndex,
         // key
-        ix.accounts.rewardAuthority.toBase58(),
-        ix.accounts.funder.toBase58(),
-        ix.accounts.whirlpool.toBase58(),
-        ix.accounts.rewardMint.toBase58(),
-        ix.accounts.rewardVault.toBase58(),
-        ix.accounts.tokenProgram.toBase58(),
-        ix.accounts.systemProgram.toBase58(),
-        ix.accounts.rent.toBase58(),
+        ix.accounts.rewardAuthority,
+        ix.accounts.funder,
+        ix.accounts.whirlpool,
+        ix.accounts.rewardMint,
+        ix.accounts.rewardVault,
+        ix.accounts.tokenProgram,
+        ix.accounts.systemProgram,
+        ix.accounts.rent,
         // no transfer
       ]);
     case "initializeTickArray":
@@ -590,10 +589,10 @@ async function insertInstruction(txid: BigInt, order: number, ix: DecodedWhirlpo
         // data
         ix.data.startTickIndex,
         // key
-        ix.accounts.whirlpool.toBase58(),
-        ix.accounts.funder.toBase58(),
-        ix.accounts.tickArray.toBase58(),
-        ix.accounts.systemProgram.toBase58(),
+        ix.accounts.whirlpool,
+        ix.accounts.funder,
+        ix.accounts.tickArray,
+        ix.accounts.systemProgram,
         // no transfer
       ]);
     case "deletePositionBundle":
@@ -602,12 +601,12 @@ async function insertInstruction(txid: BigInt, order: number, ix: DecodedWhirlpo
         order,
         // no data
         // key
-        ix.accounts.positionBundle.toBase58(),
-        ix.accounts.positionBundleMint.toBase58(),
-        ix.accounts.positionBundleTokenAccount.toBase58(),
-        ix.accounts.positionBundleOwner.toBase58(),
-        ix.accounts.receiver.toBase58(),
-        ix.accounts.tokenProgram.toBase58(),
+        ix.accounts.positionBundle,
+        ix.accounts.positionBundleMint,
+        ix.accounts.positionBundleTokenAccount,
+        ix.accounts.positionBundleOwner,
+        ix.accounts.receiver,
+        ix.accounts.tokenProgram,
         // no transfer
       ]);
     case "openBundledPosition":
@@ -619,14 +618,14 @@ async function insertInstruction(txid: BigInt, order: number, ix: DecodedWhirlpo
         ix.data.tickLowerIndex,
         ix.data.tickUpperIndex,
         // key
-        ix.accounts.bundledPosition.toBase58(),
-        ix.accounts.positionBundle.toBase58(),
-        ix.accounts.positionBundleTokenAccount.toBase58(),
-        ix.accounts.positionBundleAuthority.toBase58(),
-        ix.accounts.whirlpool.toBase58(),
-        ix.accounts.funder.toBase58(),
-        ix.accounts.systemProgram.toBase58(),
-        ix.accounts.rent.toBase58(),
+        ix.accounts.bundledPosition,
+        ix.accounts.positionBundle,
+        ix.accounts.positionBundleTokenAccount,
+        ix.accounts.positionBundleAuthority,
+        ix.accounts.whirlpool,
+        ix.accounts.funder,
+        ix.accounts.systemProgram,
+        ix.accounts.rent,
         // no transfer
       ]);
     case "closeBundledPosition":
@@ -636,11 +635,11 @@ async function insertInstruction(txid: BigInt, order: number, ix: DecodedWhirlpo
         // data
         ix.data.bundleIndex,
         // key
-        ix.accounts.bundledPosition.toBase58(),
-        ix.accounts.positionBundle.toBase58(),
-        ix.accounts.positionBundleTokenAccount.toBase58(),
-        ix.accounts.positionBundleAuthority.toBase58(),
-        ix.accounts.receiver.toBase58(),
+        ix.accounts.bundledPosition,
+        ix.accounts.positionBundle,
+        ix.accounts.positionBundleTokenAccount,
+        ix.accounts.positionBundleAuthority,
+        ix.accounts.receiver,
         // no transfer
       ]);
     case "setCollectProtocolFeesAuthority":
@@ -649,9 +648,9 @@ async function insertInstruction(txid: BigInt, order: number, ix: DecodedWhirlpo
         order,
         // no data
         // key
-        ix.accounts.whirlpoolsConfig.toBase58(),
-        ix.accounts.collectProtocolFeesAuthority.toBase58(),
-        ix.accounts.newCollectProtocolFeesAuthority.toBase58(),
+        ix.accounts.whirlpoolsConfig,
+        ix.accounts.collectProtocolFeesAuthority,
+        ix.accounts.newCollectProtocolFeesAuthority,
         // no transfer
       ]);
     case "setDefaultFeeRate":
@@ -661,9 +660,9 @@ async function insertInstruction(txid: BigInt, order: number, ix: DecodedWhirlpo
         // data
         ix.data.defaultFeeRate,
         // key
-        ix.accounts.whirlpoolsConfig.toBase58(),
-        ix.accounts.feeTier.toBase58(),
-        ix.accounts.feeAuthority.toBase58(),
+        ix.accounts.whirlpoolsConfig,
+        ix.accounts.feeTier,
+        ix.accounts.feeAuthority,
         // no transfer
       ]);
     case "setDefaultProtocolFeeRate":
@@ -673,8 +672,8 @@ async function insertInstruction(txid: BigInt, order: number, ix: DecodedWhirlpo
         // data
         ix.data.defaultProtocolFeeRate,
         // key
-        ix.accounts.whirlpoolsConfig.toBase58(),
-        ix.accounts.feeAuthority.toBase58(),
+        ix.accounts.whirlpoolsConfig,
+        ix.accounts.feeAuthority,
         // no transfer
       ]);
     case "setFeeAuthority":
@@ -683,9 +682,9 @@ async function insertInstruction(txid: BigInt, order: number, ix: DecodedWhirlpo
         order,
         // no data
         // key
-        ix.accounts.whirlpoolsConfig.toBase58(),
-        ix.accounts.feeAuthority.toBase58(),
-        ix.accounts.newFeeAuthority.toBase58(),
+        ix.accounts.whirlpoolsConfig,
+        ix.accounts.feeAuthority,
+        ix.accounts.newFeeAuthority,
         // no transfer
       ]);
     case "setFeeRate":
@@ -695,9 +694,9 @@ async function insertInstruction(txid: BigInt, order: number, ix: DecodedWhirlpo
         // data
         ix.data.feeRate,
         // key
-        ix.accounts.whirlpoolsConfig.toBase58(),
-        ix.accounts.whirlpool.toBase58(),
-        ix.accounts.feeAuthority.toBase58(),
+        ix.accounts.whirlpoolsConfig,
+        ix.accounts.whirlpool,
+        ix.accounts.feeAuthority,
         // no transfer
       ]);
     case "setProtocolFeeRate":
@@ -707,9 +706,9 @@ async function insertInstruction(txid: BigInt, order: number, ix: DecodedWhirlpo
         // data
         ix.data.protocolFeeRate,
         // key
-        ix.accounts.whirlpoolsConfig.toBase58(),
-        ix.accounts.whirlpool.toBase58(),
-        ix.accounts.feeAuthority.toBase58(),
+        ix.accounts.whirlpoolsConfig,
+        ix.accounts.whirlpool,
+        ix.accounts.feeAuthority,
         // no transfer
       ]);
     case "setRewardAuthority":
@@ -719,9 +718,9 @@ async function insertInstruction(txid: BigInt, order: number, ix: DecodedWhirlpo
         // data
         ix.data.rewardIndex,
         // key
-        ix.accounts.whirlpool.toBase58(),
-        ix.accounts.rewardAuthority.toBase58(),
-        ix.accounts.newRewardAuthority.toBase58(),
+        ix.accounts.whirlpool,
+        ix.accounts.rewardAuthority,
+        ix.accounts.newRewardAuthority,
         // no transfer
       ]);
     case "setRewardAuthorityBySuperAuthority":
@@ -731,10 +730,10 @@ async function insertInstruction(txid: BigInt, order: number, ix: DecodedWhirlpo
         // data
         ix.data.rewardIndex,
         // key
-        ix.accounts.whirlpoolsConfig.toBase58(),
-        ix.accounts.whirlpool.toBase58(),
-        ix.accounts.rewardEmissionsSuperAuthority.toBase58(),
-        ix.accounts.newRewardAuthority.toBase58(),
+        ix.accounts.whirlpoolsConfig,
+        ix.accounts.whirlpool,
+        ix.accounts.rewardEmissionsSuperAuthority,
+        ix.accounts.newRewardAuthority,
         // no transfer
       ]);
     case "setRewardEmissions":
@@ -745,9 +744,9 @@ async function insertInstruction(txid: BigInt, order: number, ix: DecodedWhirlpo
         ix.data.rewardIndex,
         BigInt(ix.data.emissionsPerSecondX64.toString()),
         // key
-        ix.accounts.whirlpool.toBase58(),
-        ix.accounts.rewardAuthority.toBase58(),
-        ix.accounts.rewardVault.toBase58(),
+        ix.accounts.whirlpool,
+        ix.accounts.rewardAuthority,
+        ix.accounts.rewardVault,
         // no transfer
       ]);
     case "setRewardEmissionsSuperAuthority":
@@ -756,9 +755,9 @@ async function insertInstruction(txid: BigInt, order: number, ix: DecodedWhirlpo
         order,
         // no data
         // key
-        ix.accounts.whirlpoolsConfig.toBase58(),
-        ix.accounts.rewardEmissionsSuperAuthority.toBase58(),
-        ix.accounts.newRewardEmissionsSuperAuthority.toBase58(),
+        ix.accounts.whirlpoolsConfig,
+        ix.accounts.rewardEmissionsSuperAuthority,
+        ix.accounts.newRewardEmissionsSuperAuthority,
         // no transfer
       ]);
     default:

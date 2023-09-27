@@ -74,7 +74,7 @@ export async function processBlocks(database: Connection, solana: AxiosInstance)
       whirlpoolTouchedOkTransactions++;
       whirlpoolTouchedOkTransactionDataSize += JSONBigInt.stringify(tx).length;
 
-      const whirlpoolEvents = WhirlpoolTransactionDecoder.decode({ result: tx }, new PublicKey(WHIRLPOOL_PUBKEY));
+      const whirlpoolEvents = WhirlpoolTransactionDecoder.decode({ result: tx }, WHIRLPOOL_PUBKEY);
       //console.log(whirlpoolEvents);
       whirlpoolEvents.forEach((e) => {
         if (!instructionCount.has(e.name)) instructionCount.set(e.name, 0);
