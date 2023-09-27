@@ -15,7 +15,7 @@ async function main() {
     user: 'root',
     password: 'password',
     database: 'localtest',
-    connectionLimit: 100,
+    connectionLimit: 10,
     bigIntAsNumber: true, // number is safe
   });
 
@@ -47,9 +47,9 @@ async function main() {
 
   // clear queue
   console.log("clear queue...");
-  await queueBlockSequencer.obliterate({force: true});
-  await queueBlockFetcher.obliterate({force: true});
-  await queueBlockProcessor.obliterate({force: true});
+  //await queueBlockSequencer.obliterate({force: true});
+  //await queueBlockFetcher.obliterate({force: true});
+  //await queueBlockProcessor.obliterate({force: true});
 
   // build worker
   console.log("build worker...");
@@ -127,67 +127,17 @@ async function main() {
   // start worker
   // await するとワーカー終了まで待つので進まない
   console.log("start worker...");
-  workerBlockSequencer.run();
-  workerBlockFetcher.run();
-  workerBlockFetcher2.run();
+  //workerBlockSequencer.run();
+  //workerBlockFetcher.run();
+  //workerBlockFetcher2.run();
   workerBlockProcessor.run();
 
-  console.log("add sequencer repeated job...");
-  queueBlockSequencer.add("sequencer repeated", undefined, { repeat: { every: 10 * 1000 } });
+  //console.log("add sequencer repeated job...");
+  //queueBlockSequencer.add("sequencer repeated", undefined, { repeat: { every: 10 * 1000 } });
   
   //for (let i=0; i<5; i++) {
   console.log("start dispatch...");
   while (true) {
-    console.log("enqueue jobs...");
-
-    let db: mariadb.Connection;
-
-    // enqueue block_fetcher
-    let blockFetcherJobCount = 0;
-    try {
-      db = await pool.getConnection();
-
-      const enqueued = await queueBlockFetcher.getJobs(["waiting", "active"]);
-      const enqueuedSlotSet = new Set<number>();
-      enqueued.forEach(job => { enqueuedSlotSet.add(job.data); });
-
-      const rows = await db.query<Pick<Slot, "slot">[]>('SELECT slot FROM slots WHERE state = 0 ORDER BY slot ASC LIMIT 1000');
-      rows.forEach(row => {
-        if (!enqueuedSlotSet.has(row.slot)) {
-          queueBlockFetcher.add(`block_fetcher(${row.slot})`, row.slot);
-          blockFetcherJobCount++;
-        }
-      });
-    } catch (err) {
-      console.log(err);
-    } finally {
-      db?.end();
-    }
-
-    // enqueue block_processor
-    let blockProcessorJobCount = 0;
-    try {
-      db = await pool.getConnection();
-
-      const enqueued = await queueBlockProcessor.getJobs(["waiting", "active"]);
-      const enqueuedSlotSet = new Set<number>();
-      enqueued.forEach(job => { enqueuedSlotSet.add(job.data); });
-
-      const rows = await db.query<Pick<Slot, "slot">[]>('SELECT slot FROM slots WHERE state = 1 ORDER BY slot ASC LIMIT 1000');
-      rows.forEach(row => {
-        if (!enqueuedSlotSet.has(row.slot)) {
-          queueBlockProcessor.add(`block_processor(${row.slot})`, row.slot);
-          blockProcessorJobCount++;
-        }
-      });
-    } catch (err) {
-      console.log(err);
-    } finally {
-      db?.end();
-    }
-
-    console.log("enqueue", "fetcher", blockFetcherJobCount, "processor", blockProcessorJobCount);
-
     await sleep(10 * 1000);
   }
 

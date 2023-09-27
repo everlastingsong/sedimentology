@@ -15,7 +15,7 @@ async function main() {
     user: 'root',
     password: 'password',
     database: 'localtest',
-    connectionLimit: 100,
+    connectionLimit: 5,
     bigIntAsNumber: true, // number is safe
   });
 
@@ -128,9 +128,9 @@ async function main() {
   // await するとワーカー終了まで待つので進まない
   console.log("start worker...");
   workerBlockSequencer.run();
-  workerBlockFetcher.run();
-  workerBlockFetcher2.run();
-  workerBlockProcessor.run();
+  //workerBlockFetcher.run();
+  //workerBlockFetcher2.run();
+  //workerBlockProcessor.run();
 
   console.log("add sequencer repeated job...");
   queueBlockSequencer.add("sequencer repeated", undefined, { repeat: { every: 10 * 1000 } });
