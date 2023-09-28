@@ -256,7 +256,7 @@ export async function fetchAndProcessBlock(database: Connection, solana: AxiosIn
   }
 
   await database.query('DELETE FROM blocks WHERE slot = ?', [slot]);
-  await database.query("UPDATE slots SET state = ? WHERE slot = ?", [SlotProcessingState.Processed, slot]);
+  await database.query("UPDATE slots SET blockTime = ?, state = ? WHERE slot = ?", [blockTime, SlotProcessingState.Processed, slot]);
   await database.commit();
 
   console.log(`processed slot=${slot}`, `${processedTransactions.length}/${blockData.transactions.length}`, `${processedTransactions.reduce((sum, tx) => sum + tx.whirlpoolInstructions.length, 0)} ix`);

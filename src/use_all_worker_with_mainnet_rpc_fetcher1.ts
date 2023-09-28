@@ -6,6 +6,7 @@ import axios from "axios";
 import { Slot } from './types';
 import { processBlock } from './worker/block_processor';
 import { addNewSlots } from './worker/block_sequencer';
+import { fetchAndProcessBlock } from './worker/block_integrated_fetcher_processor';
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -77,7 +78,7 @@ async function main() {
     let db: mariadb.Connection;
     try {
       db = await pool.getConnection();
-      await fetchBlock(db, solana, slot);
+      await fetchAndProcessBlock(db, solana, slot);
     } catch (err) {
       console.log(err);
       throw err;
@@ -95,7 +96,7 @@ async function main() {
     let db: mariadb.Connection;
     try {
       db = await pool.getConnection();
-      await fetchBlock(db, solana2, slot);
+      await fetchAndProcessBlock(db, solana2, slot);
     } catch (err) {
       console.log(err);
       throw err;
