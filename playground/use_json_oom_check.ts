@@ -35,7 +35,10 @@ async function main() {
 
   global.gc();
   const finalMemoryUsage = process.memoryUsage();
-  
+
+  // JSON.parse の結果の文字列は巨大な文字列への slice 参照では「ない」
+  // よって、OOMはおこらない。OOM も json-bigint を使った弊害だった。
+
   console.log("initialMemoryUsage", initialMemoryUsage);
   console.log("finalMemoryUsage", finalMemoryUsage);
 }

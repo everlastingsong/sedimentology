@@ -1,30 +1,17 @@
 import { Connection } from "mariadb";
 import { AxiosInstance } from "axios";
-import { strToU8, strFromU8, gzipSync, gunzipSync } from "fflate";
 import { Slot, SlotProcessingState } from "../types";
 import invariant from "tiny-invariant";
 
-import { Block } from "../types";
 
-import JSONBigInt from "json-bigint";
-import BigNumber from "bignumber.js";
-
-import { PublicKey } from "@solana/web3.js";
 import { DecodedWhirlpoolInstruction, WhirlpoolTransactionDecoder } from "@yugure-orca/whirlpool-tx-decoder";
 
 import { LRUCache } from "lru-cache";
 import { insertInstruction } from "./block_processor";
 
-// change BigNumber config to never use exponential notation
-BigNumber.config({ EXPONENTIAL_AT: 1e9 });
-
 const WHIRLPOOL_PUBKEY = "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc";
 
 const pubkeyLRUCache = new LRUCache<string, boolean>({ max: 10_000 });
-
-function createNewStringInstance(s: string): string {
-  return Buffer.from(s).toString();
-}
 
 export async function fetchAndProcessBlock(database: Connection, solana: AxiosInstance, slot: number) {
   const [{ state, blockHeight }] = await database.query<Slot[]>('SELECT * FROM slots WHERE slot = ?', [slot]);
@@ -52,7 +39,7 @@ export async function fetchAndProcessBlock(database: Connection, solana: AxiosIn
         },
       ],
     },
-    // to preserve u64 value, do not use default JSON.parse
+    // we want to obtain raw string data, so do not use any transformation
     transformResponse: (r) => r,
     // use gzip compression to reduce network traffic
     headers: {
@@ -63,7 +50,10 @@ export async function fetchAndProcessBlock(database: Connection, solana: AxiosIn
   });
 
   const originalData = response.data as string;
-  const json = JSONBigInt.parse(originalData);
+
+  // JSON.parse cannot handle numbers > Number.MAX_SAFE_INTEGER precisely,
+  // but it is okay because the ALL fields we are interested are < Number.MAX_SAFE_INTEGER or string.
+  const json = JSON.parse(originalData);
 
   // JSON RPC ensures that error field is used when error occurs
   if (json.error) {
@@ -76,21 +66,15 @@ export async function fetchAndProcessBlock(database: Connection, solana: AxiosIn
   invariant(json.result.blockTime, "blockTime must exist");
   invariant(json.result.blockhash, "blockhash must exist");
   invariant(json.result.parentSlot, "parentSlot must exist");
-  invariant(json.result.previousBlockhash, "previousBlockhash must exist");
   invariant(json.result.transactions, "transactions must exist");
 
   invariant(json.result.blockHeight == blockHeight, "blockHeight must match");
 
   const blockTime = json.result.blockTime;
 
-  // .0 の再現で問題がある (がどうでもいい)
-  //invariant(JSONBigInt.stringify(json) === jsonString, "some data seems to be lost during JSON parse/stringify");
-
 // PROCESSOR phase
 
   const blockData = json.result;
-
-  //console.log("transactions", blockData.transactions.length);
 
   const touchedPubkeys = new Set<string>();
   const processedTransactions = [];
@@ -110,8 +94,6 @@ export async function fetchAndProcessBlock(database: Connection, solana: AxiosIn
     const writablePubkeys = tx.meta.loadedAddresses.writable;
     const staticPubkeys = tx.transaction.message.accountKeys;
     const allPubkeys: string[] = [...staticPubkeys, ...readonlyPubkeys, ...writablePubkeys];
-
-    // TODO: use bigint always (including JSONBigInt & Whirlpool instruction decoder) & mariaDB
 
     // FOR txs
     // TODO: make function toTxId
@@ -233,11 +215,7 @@ export async function fetchAndProcessBlock(database: Connection, solana: AxiosIn
   for (const pubkey of touchedPubkeys) {
     if (pubkeyLRUCache.get(pubkey)) continue;
     await prepared.execute([pubkey]);
-
-    // I have faced OOM error.
-    // pubkey is sliced from original string, so it contains the reference to the originalData.
-    // So I need to create completely new string instance to garbage collect originalData.
-    pubkeyLRUCache.set(createNewStringInstance(pubkey), true);
+    pubkeyLRUCache.set(pubkey, true);
   }
   prepared.close();
 
