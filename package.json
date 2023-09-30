@@ -20,6 +20,7 @@
     "@yugure-orca/whirlpool-tx-decoder": "^0.1.0",
     "axios": "^1.5.0",
     "bullmq": "^4.11.0",
+    "commander": "^11.0.0",
     "fflate": "^0.8.0",
     "json-bigint": "^1.0.0",
     "lru-cache": "^10.0.1",

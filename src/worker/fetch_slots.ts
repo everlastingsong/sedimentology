@@ -1,6 +1,6 @@
 import { Connection } from "mariadb";
 import { AxiosInstance } from "axios";
-import { State, SlotProcessingState } from "../types";
+import { State, SlotProcessingState } from "../common/types";
 import invariant from "tiny-invariant";
 
 export async function fetchSlots(database: Connection, solana: AxiosInstance, limit: number) {

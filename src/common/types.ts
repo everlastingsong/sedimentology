@@ -1,3 +1,8 @@
+export enum WorkerQueueName {
+  SEQUENCER = "sequencer",
+  PROCESSOR = "processor",
+}
+
 export enum SlotProcessingState {
   Added = 0,
   Fetched = 1,
@@ -16,6 +21,7 @@ export type Slot = {
   state: SlotProcessingState;
 };
 
+// DEPRECATED
 export type Block = {
   slot: number;
   gzJsonString: Buffer;

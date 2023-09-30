@@ -1,10 +1,6 @@
 import { ConnectionConfig } from "mariadb";
 import { ConnectionOptions }  from "bullmq";
 
-export enum Queue {
-  BLOCK_SEQUENCER = "block_sequencer",
-}
-
 export const REDIS_CONNECTION_CONFIG: ConnectionOptions = {
   host: "localhost",
   port: 6379,

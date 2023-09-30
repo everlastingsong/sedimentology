@@ -1,8 +1,8 @@
 import mariadb from 'mariadb';
 import { Worker, ConnectionOptions, Queue } from 'bullmq';
 import axios from "axios";
-import { Slot } from './types';
-import { fetchSlots } from './worker/block_sequencer';
+import { Slot } from './common/types';
+import { fetchSlots } from './worker/fetch_slots';
 import { fetchAndProcessBlock } from './worker/block_integrated_fetcher_processor';
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));

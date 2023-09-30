@@ -3,9 +3,9 @@ import { fetchBlock } from './worker/block_fetcher';
 import { Worker, ConnectionOptions, Queue } from 'bullmq';
 import { DB_CONNECTION_CONFIG, SOLANA_RPC_URL } from "./constants";
 import axios from "axios";
-import { Slot } from './types';
+import { Slot } from './common/types';
 import { processBlock } from './worker/block_processor';
-import { fetchSlots } from './worker/block_sequencer';
+import { fetchSlots } from './worker/fetch_slots';
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 

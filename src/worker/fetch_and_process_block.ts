@@ -1,6 +1,6 @@
 import { Connection } from "mariadb";
 import { AxiosInstance } from "axios";
-import { Slot, SlotProcessingState } from "../types";
+import { Slot, SlotProcessingState } from "../common/types";
 import { LRUCache } from "lru-cache";
 import invariant from "tiny-invariant";
 import { DecodedWhirlpoolInstruction, WhirlpoolTransactionDecoder } from "@yugure-orca/whirlpool-tx-decoder";

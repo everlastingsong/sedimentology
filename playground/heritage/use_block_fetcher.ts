@@ -3,8 +3,10 @@ import { fetchBlock } from './worker/block_fetcher';
 import { Worker, ConnectionOptions, Queue } from 'bullmq';
 import { DB_CONNECTION_CONFIG, SOLANA_RPC_URL } from "./constants";
 import axios from "axios";
-import { Slot } from './types';
-import { processBlock } from './worker/block_processor';
+import { Slot } from './common/types';
+
+
+
 
 async function main() {
   const pool = mariadb.createPool({
@@ -12,7 +14,7 @@ async function main() {
     user: 'root',
     password: 'password',
     database: 'solana',
-    connectionLimit: 10,
+    connectionLimit: 5,
     bigIntAsNumber: true, // number is safe
   });
 
@@ -29,13 +31,13 @@ async function main() {
   const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
   
-  const queueBlockProcessor = new Queue<number, void>("block_processor", { connection: redis });
+  const queueBlockFetcher = new Queue<number, void>("block_fetcher", { connection: redis });
 
   // clear queue
-  await queueBlockProcessor.drain();
+  await queueBlockFetcher.drain();
 
   // start worker
-  const workerBlockProcessor = new Worker<number, void>("block_processor", async job => {
+  const workerBlockFetcher = new Worker<number, void>("block_fetcher", async job => {
     const slot = job.data;
     console.log("consuming...", job.name, slot);
 
@@ -44,7 +46,7 @@ async function main() {
     let db: mariadb.Connection;
     try {
       db = await pool.getConnection();
-      await processBlock(db, solana, slot);
+      await fetchBlock(db, solana, slot);
     } catch (err) {
       console.log(err);
       throw err;
@@ -53,7 +55,7 @@ async function main() {
     }
 
     console.log("consumed");
-  }, { connection: redis, concurrency: 1 });
+  }, { connection: redis, concurrency: 10 });
 
   for (let i=0; i<5; i++) {
     console.log("enqueue jobs...");
@@ -62,16 +64,16 @@ async function main() {
     try {
       db = await pool.getConnection();
 
-      const enqueued = await queueBlockProcessor.getJobs(["waiting", "active"]);
+      const enqueued = await queueBlockFetcher.getJobs(["waiting", "active"]);
 
       const enqueuedSlotSet = new Set<number>();
       enqueued.forEach(job => { enqueuedSlotSet.add(job.data); });
 
-      const rows = await db.query<Pick<Slot, "slot">[]>('SELECT slot FROM slots WHERE state = 1 ORDER BY slot ASC LIMIT 100');
+      const rows = await db.query<Pick<Slot, "slot">[]>('SELECT slot FROM slots WHERE state = 0 ORDER BY slot ASC LIMIT 100');
       rows.forEach(row => {
         if (!enqueuedSlotSet.has(row.slot)) {
           console.log("enqueue", row.slot, "to block_fetcher");
-          queueBlockProcessor.add(`block_processor(${row.slot})`, row.slot);
+          queueBlockFetcher.add(`block_fetcher(${row.slot})`, row.slot);
         }
       });
     } catch (err) {
