@@ -22,6 +22,9 @@ const WHIRLPOOL_PUBKEY = "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc";
 
 const pubkeyLRUCache = new LRUCache<string, boolean>({ max: 10_000 });
 
+function createNewStringInstance(s: string): string {
+  return Buffer.from(s).toString();
+}
 
 export async function fetchAndProcessBlock(database: Connection, solana: AxiosInstance, slot: number) {
   const [{ state, blockHeight }] = await database.query<Slot[]>('SELECT * FROM slots WHERE slot = ?', [slot]);
@@ -230,7 +233,11 @@ export async function fetchAndProcessBlock(database: Connection, solana: AxiosIn
   for (const pubkey of touchedPubkeys) {
     if (pubkeyLRUCache.get(pubkey)) continue;
     await prepared.execute([pubkey]);
-    pubkeyLRUCache.set(pubkey, true);
+
+    // I have faced OOM error.
+    // pubkey is sliced from original string, so it contains the reference to the originalData.
+    // So I need to create completely new string instance to garbage collect originalData.
+    pubkeyLRUCache.set(createNewStringInstance(pubkey), true);
   }
   prepared.close();
 

@@ -35,7 +35,7 @@ async function main() {
     db: 2,
   };
 
-  const MAX_ADD_SLOT_PER_JOB = 100;
+  const MAX_ADD_SLOT_PER_JOB = 500;
 
   const QUEUE_BLOCK_SEQUENCER = "block_sequencer";
   const QUEUE_BLOCK_FETCHER = "block_fetcher";
