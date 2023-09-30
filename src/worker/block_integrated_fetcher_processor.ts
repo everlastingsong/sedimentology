@@ -1,13 +1,9 @@
 import { Connection } from "mariadb";
 import { AxiosInstance } from "axios";
 import { Slot, SlotProcessingState } from "../types";
-import invariant from "tiny-invariant";
-
-
-import { DecodedWhirlpoolInstruction, WhirlpoolTransactionDecoder } from "@yugure-orca/whirlpool-tx-decoder";
-
 import { LRUCache } from "lru-cache";
-import { insertInstruction } from "./block_processor";
+import invariant from "tiny-invariant";
+import { DecodedWhirlpoolInstruction, WhirlpoolTransactionDecoder } from "@yugure-orca/whirlpool-tx-decoder";
 
 const WHIRLPOOL_PUBKEY = "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc";
 
@@ -21,7 +17,9 @@ export async function fetchAndProcessBlock(database: Connection, solana: AxiosIn
     return;
   }
 
-// FETCHER phase
+  ////////////////////////////////////////////////////////////////////////////////
+  // FETCHER
+  ////////////////////////////////////////////////////////////////////////////////
 
   // getBlock
   // see: https://docs.solana.com/api/http#getblock
@@ -46,7 +44,8 @@ export async function fetchAndProcessBlock(database: Connection, solana: AxiosIn
       "Content-Type": "application/json",
       "Accept-Encoding": "gzip",
     },
-    decompress: true, // axios automatically decompresses gzip response
+    // axios automatically decompresses gzip response
+    decompress: true,
   });
 
   const originalData = response.data as string;
@@ -72,9 +71,13 @@ export async function fetchAndProcessBlock(database: Connection, solana: AxiosIn
 
   const blockTime = json.result.blockTime;
 
-// PROCESSOR phase
+  ////////////////////////////////////////////////////////////////////////////////
+  // PROCESSOR
+  ////////////////////////////////////////////////////////////////////////////////
 
   const blockData = json.result;
+
+  // process transactions
 
   const touchedPubkeys = new Set<string>();
   const processedTransactions = [];
@@ -95,13 +98,12 @@ export async function fetchAndProcessBlock(database: Connection, solana: AxiosIn
     const staticPubkeys = tx.transaction.message.accountKeys;
     const allPubkeys: string[] = [...staticPubkeys, ...readonlyPubkeys, ...writablePubkeys];
 
-    // FOR txs
-    // TODO: make function toTxId
-    const txid = BigInt(slot) * BigInt(2 ** 24) + BigInt(orderInBlock); // 40 bits for slot, 24 bits for orderInBlock
+    // FOR txs table
+    const txid = toTxID(slot, orderInBlock);
     const signature = tx.transaction.signatures[0];
     const payer = tx.transaction.message.accountKeys[0];
 
-    // FOR pubkeys
+    // FOR pubkeys table
     touchedPubkeys.add(payer);
     whirlpoolInstructions.forEach((ix) => {
       switch (ix.name) {
@@ -115,7 +117,7 @@ export async function fetchAndProcessBlock(database: Connection, solana: AxiosIn
       }
     });
 
-    // FOR balances
+    // FOR balances table
     const touchedVaultPubkeys = new Set<string>();
     whirlpoolInstructions.forEach((ix) => {
       switch (ix.name) {
@@ -171,6 +173,7 @@ export async function fetchAndProcessBlock(database: Connection, solana: AxiosIn
         case "setRewardAuthorityBySuperAuthority":
         case "setRewardEmissionsSuperAuthority":
         case "updateFeesAndRewards":
+          // This instruction does not affect the token balance.
           break;
         default:
           throw new Error("unknown whirlpool instruction name");
@@ -191,10 +194,8 @@ export async function fetchAndProcessBlock(database: Connection, solana: AxiosIn
       };
     });
 
-    // FOR ixsX
-
-
-  //  console.log("tx", signature, payer, whirlpoolInstructions.length, whirlpoolInstructions.map((ix) => ix.name), balances);
+    // FOR ixsX tables
+    // no specific processing
 
     processedTransactions.push({
       txid,
@@ -203,13 +204,11 @@ export async function fetchAndProcessBlock(database: Connection, solana: AxiosIn
       balances,
       whirlpoolInstructions,
     });
-
   });
 
-  //console.log("touchedPubkeys", touchedPubkeys.size);
-  //console.log("processedTransactions", processedTransactions.length);
+  // save processed transactions to database
 
-  // add pubkeys
+  // insert into pubkeys
   // anyway, we need to add pubkeys, so we do it outside of transaction for parallel processing
   const prepared = await database.prepare("CALL addPubkeyIfNotExists(?)");
   for (const pubkey of touchedPubkeys) {
@@ -220,12 +219,16 @@ export async function fetchAndProcessBlock(database: Connection, solana: AxiosIn
   prepared.close();
 
   await database.beginTransaction();
+
+  // insert into txs
   if (processedTransactions.length > 0) {
     await database.batch(
       "INSERT INTO txs (txid, signature, payer) VALUES (?, ?, fromPubkeyBase58(?))",
       processedTransactions.map((tx) => [tx.txid, tx.signature, tx.payer])
     );
   }
+
+  // insert into balances
   const balances = processedTransactions.flatMap((tx) => tx.balances.map((b) => [tx.txid, b.account, b.pre, b.post]));
   if (balances.length > 0) {
     await database.batch(
@@ -233,35 +236,571 @@ export async function fetchAndProcessBlock(database: Connection, solana: AxiosIn
       balances
     );
   }
+
+  // insert into ixsX
   for (const tx of processedTransactions) {
     await Promise.all(tx.whirlpoolInstructions.map((ix: DecodedWhirlpoolInstruction, order) => {
-    //  console.log("ix", tx.txid, order, ix.name);
       return insertInstruction(tx.txid, order, ix, database);
     }));
   }
 
-  await database.query('DELETE FROM blocks WHERE slot = ?', [slot]);
+  // update slots
   await database.query("UPDATE slots SET blockTime = ?, state = ? WHERE slot = ?", [blockTime, SlotProcessingState.Processed, slot]);
+
   await database.commit();
-
-  console.log(`processed slot=${slot}`, `${processedTransactions.length}/${blockData.transactions.length}`, `${processedTransactions.reduce((sum, tx) => sum + tx.whirlpoolInstructions.length, 0)} ix`);
 }
 
-/*
-import { DB_CONNECTION_CONFIG, SOLANA_RPC_URL } from "../constants";
-import { createConnection } from "mariadb";
-import axios from "axios";
 
-async function main() {
-  const database = await createConnection(DB_CONNECTION_CONFIG);
-  const solana = axios.create({
-    baseURL: SOLANA_RPC_URL,
-    method: "post",
-  });
-
-  await fetchBlock(database, solana, 217833455);
-  await database.end();
+function toTxID(slot: number, orderInBlock: number): BigInt {
+  // 40 bits for slot, 24 bits for orderInBlock
+  const txid = BigInt(slot) * BigInt(2 ** 24) + BigInt(orderInBlock);
+  return txid;
 }
 
-main();
-*/
+
+async function insertInstruction(txid: BigInt, order: number, ix: DecodedWhirlpoolInstruction, database: Connection) {
+  const buildSQL = (ixName: string, numData: number, numKey: number, numTransfer: number): string => {
+    const table = `ixs${ixName.charAt(0).toUpperCase() + ixName.slice(1)}`;
+    const data = Array(numData).fill(", ?").join("");
+    const key = Array(numKey).fill(", fromPubkeyBase58(?)").join("");
+    const transfer = Array(numTransfer).fill(", ?").join("");
+    return `INSERT INTO ${table} VALUES (?, ?${data}${key}${transfer})`;
+  }
+
+  switch (ix.name) {
+    case "swap":
+      return database.query(buildSQL(ix.name, 5, 11, 2), [
+        txid,
+        order,
+        // data
+        BigInt(ix.data.amount.toString()),
+        BigInt(ix.data.otherAmountThreshold.toString()),
+        BigInt(ix.data.sqrtPriceLimit.toString()),
+        ix.data.amountSpecifiedIsInput,
+        ix.data.aToB,
+        // key
+        ix.accounts.tokenProgram,
+        ix.accounts.tokenAuthority,
+        ix.accounts.whirlpool,
+        ix.accounts.tokenOwnerAccountA,
+        ix.accounts.tokenVaultA,
+        ix.accounts.tokenOwnerAccountB,
+        ix.accounts.tokenVaultB,
+        ix.accounts.tickArray0,
+        ix.accounts.tickArray1,
+        ix.accounts.tickArray2,
+        ix.accounts.oracle,
+        // transfer
+        ix.transfers[0],
+        ix.transfers[1],
+      ]);
+    case "twoHopSwap":
+      return database.query(buildSQL(ix.name, 7, 20, 4), [
+        txid,
+        order,
+        // data
+        BigInt(ix.data.amount.toString()),
+        BigInt(ix.data.otherAmountThreshold.toString()),
+        ix.data.amountSpecifiedIsInput,
+        ix.data.aToBOne,
+        ix.data.aToBTwo,
+        BigInt(ix.data.sqrtPriceLimitOne.toString()),
+        BigInt(ix.data.sqrtPriceLimitTwo.toString()),
+        // key
+        ix.accounts.tokenProgram,
+        ix.accounts.tokenAuthority,
+        ix.accounts.whirlpoolOne,
+        ix.accounts.whirlpoolTwo,
+        ix.accounts.tokenOwnerAccountOneA,
+        ix.accounts.tokenVaultOneA,
+        ix.accounts.tokenOwnerAccountOneB,
+        ix.accounts.tokenVaultOneB,
+        ix.accounts.tokenOwnerAccountTwoA,
+        ix.accounts.tokenVaultTwoA,
+        ix.accounts.tokenOwnerAccountTwoB,
+        ix.accounts.tokenVaultTwoB,
+        ix.accounts.tickArrayOne0,
+        ix.accounts.tickArrayOne1,
+        ix.accounts.tickArrayOne2,
+        ix.accounts.tickArrayTwo0,
+        ix.accounts.tickArrayTwo1,
+        ix.accounts.tickArrayTwo2,
+        ix.accounts.oracleOne,
+        ix.accounts.oracleTwo,
+        // transfer
+        ix.transfers[0],
+        ix.transfers[1],
+        ix.transfers[2],
+        ix.transfers[3],
+      ]);
+    case "openPosition":
+      return database.query(buildSQL(ix.name, 2, 10, 0), [
+        txid,
+        order,
+        // data
+        ix.data.tickLowerIndex,
+        ix.data.tickUpperIndex,
+        // key
+        ix.accounts.funder,
+        ix.accounts.owner,
+        ix.accounts.position,
+        ix.accounts.positionMint,
+        ix.accounts.positionTokenAccount,
+        ix.accounts.whirlpool,
+        ix.accounts.tokenProgram,
+        ix.accounts.systemProgram,
+        ix.accounts.rent,
+        ix.accounts.associatedTokenProgram,
+        // no transfer
+      ]);
+    case "openPositionWithMetadata":
+      return database.query(buildSQL(ix.name, 2, 13, 0), [
+        txid,
+        order,
+        // data
+        ix.data.tickLowerIndex,
+        ix.data.tickUpperIndex,
+        // key
+        ix.accounts.funder,
+        ix.accounts.owner,
+        ix.accounts.position,
+        ix.accounts.positionMint,
+        ix.accounts.positionMetadataAccount,
+        ix.accounts.positionTokenAccount,
+        ix.accounts.whirlpool,
+        ix.accounts.tokenProgram,
+        ix.accounts.systemProgram,
+        ix.accounts.rent,
+        ix.accounts.associatedTokenProgram,
+        ix.accounts.metadataProgram,
+        ix.accounts.metadataUpdateAuth,
+        // no transfer
+      ]);
+    case "increaseLiquidity":
+      return database.query(buildSQL(ix.name, 3, 11, 2), [
+        txid,
+        order,
+        // data
+        BigInt(ix.data.liquidityAmount.toString()),
+        BigInt(ix.data.tokenMaxA.toString()),
+        BigInt(ix.data.tokenMaxB.toString()),
+        // key
+        ix.accounts.whirlpool,
+        ix.accounts.tokenProgram,
+        ix.accounts.positionAuthority,
+        ix.accounts.position,
+        ix.accounts.positionTokenAccount,
+        ix.accounts.tokenOwnerAccountA,
+        ix.accounts.tokenOwnerAccountB,
+        ix.accounts.tokenVaultA,
+        ix.accounts.tokenVaultB,
+        ix.accounts.tickArrayLower,
+        ix.accounts.tickArrayUpper,
+        // transfer
+        ix.transfers[0],
+        ix.transfers[1],
+      ]);
+    case "decreaseLiquidity":
+      return database.query(buildSQL(ix.name, 3, 11, 2), [
+        txid,
+        order,
+        // data
+        BigInt(ix.data.liquidityAmount.toString()),
+        BigInt(ix.data.tokenMinA.toString()),
+        BigInt(ix.data.tokenMinB.toString()),
+        // key
+        ix.accounts.whirlpool,
+        ix.accounts.tokenProgram,
+        ix.accounts.positionAuthority,
+        ix.accounts.position,
+        ix.accounts.positionTokenAccount,
+        ix.accounts.tokenOwnerAccountA,
+        ix.accounts.tokenOwnerAccountB,
+        ix.accounts.tokenVaultA,
+        ix.accounts.tokenVaultB,
+        ix.accounts.tickArrayLower,
+        ix.accounts.tickArrayUpper,
+        // transfer
+        ix.transfers[0],
+        ix.transfers[1],
+      ]);
+    case "updateFeesAndRewards":
+      return database.query(buildSQL(ix.name, 0, 4, 0), [
+        txid,
+        order,
+        // no data
+        // key
+        ix.accounts.whirlpool,
+        ix.accounts.position,
+        ix.accounts.tickArrayLower,
+        ix.accounts.tickArrayUpper,
+        // no transfer
+      ]);
+    case "collectFees":
+      return database.query(buildSQL(ix.name, 0, 9, 2), [
+        txid,
+        order,
+        // no data
+        // key
+        ix.accounts.whirlpool,
+        ix.accounts.positionAuthority,
+        ix.accounts.position,
+        ix.accounts.positionTokenAccount,
+        ix.accounts.tokenOwnerAccountA,
+        ix.accounts.tokenVaultA,
+        ix.accounts.tokenOwnerAccountB,
+        ix.accounts.tokenVaultB,
+        ix.accounts.tokenProgram,
+        // transfer
+        ix.transfers[0],
+        ix.transfers[1],
+      ]);
+    case "collectReward":
+      return database.query(buildSQL(ix.name, 1, 7, 1), [
+        txid,
+        order,
+        // data
+        ix.data.rewardIndex,
+        // key
+        ix.accounts.whirlpool,
+        ix.accounts.positionAuthority,
+        ix.accounts.position,
+        ix.accounts.positionTokenAccount,
+        ix.accounts.rewardOwnerAccount,
+        ix.accounts.rewardVault,
+        ix.accounts.tokenProgram,
+        // transfer
+        ix.transfers[0],
+      ]);
+    case "closePosition":
+      return database.query(buildSQL(ix.name, 0, 6, 0), [
+        txid,
+        order,
+        // no data
+        // key
+        ix.accounts.positionAuthority,
+        ix.accounts.receiver,
+        ix.accounts.position,
+        ix.accounts.positionMint,
+        ix.accounts.positionTokenAccount,
+        ix.accounts.tokenProgram,
+        // no transfer
+      ]);
+    case "collectProtocolFees":
+      return database.query(buildSQL(ix.name, 0, 8, 2), [
+        txid,
+        order,
+        // no data
+        // key
+        ix.accounts.whirlpoolsConfig,
+        ix.accounts.whirlpool,
+        ix.accounts.collectProtocolFeesAuthority,
+        ix.accounts.tokenVaultA,
+        ix.accounts.tokenVaultB,
+        ix.accounts.tokenDestinationA,
+        ix.accounts.tokenDestinationB,
+        ix.accounts.tokenProgram,
+        // transfer
+        ix.transfers[0],
+        ix.transfers[1],
+      ]);
+    case "adminIncreaseLiquidity":
+      return database.query(buildSQL(ix.name, 1, 3, 0), [
+        txid,
+        order,
+        // data
+        BigInt(ix.data.liquidity.toString()),
+        // key
+        ix.accounts.whirlpoolsConfig,
+        ix.accounts.whirlpool,
+        ix.accounts.authority,
+        // no transfer
+      ]);
+    case "initializeConfig":
+      return database.query(buildSQL(ix.name, 4 - 3, 3 + 3, 0), [
+        txid,
+        order,
+        // data
+        ix.data.defaultProtocolFeeRate,
+        // data as key
+        ix.data.feeAuthority,
+        ix.data.collectProtocolFeesAuthority,
+        ix.data.rewardEmissionsSuperAuthority,
+        // key
+        ix.accounts.whirlpoolsConfig,
+        ix.accounts.funder,
+        ix.accounts.systemProgram,
+        // no transfer
+      ]);
+    case "initializeFeeTier":
+      return database.query(buildSQL(ix.name, 2, 5, 0), [
+        txid,
+        order,
+        // data
+        ix.data.tickSpacing,
+        ix.data.defaultFeeRate,
+        // key
+        ix.accounts.whirlpoolsConfig,
+        ix.accounts.feeTier,
+        ix.accounts.funder,
+        ix.accounts.feeAuthority,
+        ix.accounts.systemProgram,
+        // no transfer
+      ]);
+    case "initializePool":
+      return database.query(buildSQL(ix.name, 2, 11, 0), [
+        txid,
+        order,
+        // data
+        ix.data.tickSpacing,
+        BigInt(ix.data.initialSqrtPrice.toString()),
+        // key
+        ix.accounts.whirlpoolsConfig,
+        ix.accounts.tokenMintA,
+        ix.accounts.tokenMintB,
+        ix.accounts.funder,
+        ix.accounts.whirlpool,
+        ix.accounts.tokenVaultA,
+        ix.accounts.tokenVaultB,
+        ix.accounts.feeTier,
+        ix.accounts.tokenProgram,
+        ix.accounts.systemProgram,
+        ix.accounts.rent,
+        // no transfer
+      ]);
+    case "initializePositionBundle":
+      return database.query(buildSQL(ix.name, 0, 9, 0), [
+        txid,
+        order,
+        // no data
+        // key
+        ix.accounts.positionBundle,
+        ix.accounts.positionBundleMint,
+        ix.accounts.positionBundleTokenAccount,
+        ix.accounts.positionBundleOwner,
+        ix.accounts.funder,
+        ix.accounts.tokenProgram,
+        ix.accounts.systemProgram,
+        ix.accounts.rent,
+        ix.accounts.associatedTokenProgram,
+        // no transfer
+      ]);
+    case "initializePositionBundleWithMetadata":
+      return database.query(buildSQL(ix.name, 0, 12, 0), [
+        txid,
+        order,
+        // no data
+        // key
+        ix.accounts.positionBundle,
+        ix.accounts.positionBundleMint,
+        ix.accounts.positionBundleMetadata,
+        ix.accounts.positionBundleTokenAccount,
+        ix.accounts.positionBundleOwner,
+        ix.accounts.funder,
+        ix.accounts.metadataUpdateAuth,
+        ix.accounts.tokenProgram,
+        ix.accounts.systemProgram,
+        ix.accounts.rent,
+        ix.accounts.associatedTokenProgram,
+        ix.accounts.metadataProgram,
+        // no transfer
+      ]);
+    case "initializeReward":
+      return database.query(buildSQL(ix.name, 1, 8, 0), [
+        txid,
+        order,
+        // data
+        ix.data.rewardIndex,
+        // key
+        ix.accounts.rewardAuthority,
+        ix.accounts.funder,
+        ix.accounts.whirlpool,
+        ix.accounts.rewardMint,
+        ix.accounts.rewardVault,
+        ix.accounts.tokenProgram,
+        ix.accounts.systemProgram,
+        ix.accounts.rent,
+        // no transfer
+      ]);
+    case "initializeTickArray":
+      return database.query(buildSQL(ix.name, 1, 4, 0), [
+        txid,
+        order,
+        // data
+        ix.data.startTickIndex,
+        // key
+        ix.accounts.whirlpool,
+        ix.accounts.funder,
+        ix.accounts.tickArray,
+        ix.accounts.systemProgram,
+        // no transfer
+      ]);
+    case "deletePositionBundle":
+      return database.query(buildSQL(ix.name, 0, 6, 0), [
+        txid,
+        order,
+        // no data
+        // key
+        ix.accounts.positionBundle,
+        ix.accounts.positionBundleMint,
+        ix.accounts.positionBundleTokenAccount,
+        ix.accounts.positionBundleOwner,
+        ix.accounts.receiver,
+        ix.accounts.tokenProgram,
+        // no transfer
+      ]);
+    case "openBundledPosition":
+      return database.query(buildSQL(ix.name, 3, 8, 0), [
+        txid,
+        order,
+        // data
+        ix.data.bundleIndex,
+        ix.data.tickLowerIndex,
+        ix.data.tickUpperIndex,
+        // key
+        ix.accounts.bundledPosition,
+        ix.accounts.positionBundle,
+        ix.accounts.positionBundleTokenAccount,
+        ix.accounts.positionBundleAuthority,
+        ix.accounts.whirlpool,
+        ix.accounts.funder,
+        ix.accounts.systemProgram,
+        ix.accounts.rent,
+        // no transfer
+      ]);
+    case "closeBundledPosition":
+      return database.query(buildSQL(ix.name, 1, 5, 0), [
+        txid,
+        order,
+        // data
+        ix.data.bundleIndex,
+        // key
+        ix.accounts.bundledPosition,
+        ix.accounts.positionBundle,
+        ix.accounts.positionBundleTokenAccount,
+        ix.accounts.positionBundleAuthority,
+        ix.accounts.receiver,
+        // no transfer
+      ]);
+    case "setCollectProtocolFeesAuthority":
+      return database.query(buildSQL(ix.name, 0, 3, 0), [
+        txid,
+        order,
+        // no data
+        // key
+        ix.accounts.whirlpoolsConfig,
+        ix.accounts.collectProtocolFeesAuthority,
+        ix.accounts.newCollectProtocolFeesAuthority,
+        // no transfer
+      ]);
+    case "setDefaultFeeRate":
+      return database.query(buildSQL(ix.name, 1, 3, 0), [
+        txid,
+        order,
+        // data
+        ix.data.defaultFeeRate,
+        // key
+        ix.accounts.whirlpoolsConfig,
+        ix.accounts.feeTier,
+        ix.accounts.feeAuthority,
+        // no transfer
+      ]);
+    case "setDefaultProtocolFeeRate":
+      return database.query(buildSQL(ix.name, 1, 2, 0), [
+        txid,
+        order,
+        // data
+        ix.data.defaultProtocolFeeRate,
+        // key
+        ix.accounts.whirlpoolsConfig,
+        ix.accounts.feeAuthority,
+        // no transfer
+      ]);
+    case "setFeeAuthority":
+      return database.query(buildSQL(ix.name, 0, 3, 0), [
+        txid,
+        order,
+        // no data
+        // key
+        ix.accounts.whirlpoolsConfig,
+        ix.accounts.feeAuthority,
+        ix.accounts.newFeeAuthority,
+        // no transfer
+      ]);
+    case "setFeeRate":
+      return database.query(buildSQL(ix.name, 1, 3, 0), [
+        txid,
+        order,
+        // data
+        ix.data.feeRate,
+        // key
+        ix.accounts.whirlpoolsConfig,
+        ix.accounts.whirlpool,
+        ix.accounts.feeAuthority,
+        // no transfer
+      ]);
+    case "setProtocolFeeRate":
+      return database.query(buildSQL(ix.name, 1, 3, 0), [
+        txid,
+        order,
+        // data
+        ix.data.protocolFeeRate,
+        // key
+        ix.accounts.whirlpoolsConfig,
+        ix.accounts.whirlpool,
+        ix.accounts.feeAuthority,
+        // no transfer
+      ]);
+    case "setRewardAuthority":
+      return database.query(buildSQL(ix.name, 1, 3, 0), [
+        txid,
+        order,
+        // data
+        ix.data.rewardIndex,
+        // key
+        ix.accounts.whirlpool,
+        ix.accounts.rewardAuthority,
+        ix.accounts.newRewardAuthority,
+        // no transfer
+      ]);
+    case "setRewardAuthorityBySuperAuthority":
+      return database.query(buildSQL(ix.name, 1, 4, 0), [
+        txid,
+        order,
+        // data
+        ix.data.rewardIndex,
+        // key
+        ix.accounts.whirlpoolsConfig,
+        ix.accounts.whirlpool,
+        ix.accounts.rewardEmissionsSuperAuthority,
+        ix.accounts.newRewardAuthority,
+        // no transfer
+      ]);
+    case "setRewardEmissions":
+      return database.query(buildSQL(ix.name, 2, 3, 0), [
+        txid,
+        order,
+        // data
+        ix.data.rewardIndex,
+        BigInt(ix.data.emissionsPerSecondX64.toString()),
+        // key
+        ix.accounts.whirlpool,
+        ix.accounts.rewardAuthority,
+        ix.accounts.rewardVault,
+        // no transfer
+      ]);
+    case "setRewardEmissionsSuperAuthority":
+      return database.query(buildSQL(ix.name, 0, 3, 0), [
+        txid,
+        order,
+        // no data
+        // key
+        ix.accounts.whirlpoolsConfig,
+        ix.accounts.rewardEmissionsSuperAuthority,
+        ix.accounts.newRewardEmissionsSuperAuthority,
+        // no transfer
+      ]);
+    default:
+      throw new Error("unknown whirlpool instruction name");
+  }
+}

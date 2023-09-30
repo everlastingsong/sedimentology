@@ -15,6 +15,7 @@ export const DB_CONNECTION_CONFIG: ConnectionConfig = {
   user: 'root',
   password: 'password',
   database: 'solana',
+  // TODO: revisit, bigint is prefer ?
   bigIntAsNumber: true, // number is safe
 };
 

@@ -2,7 +2,7 @@ import mariadb from 'mariadb';
 import { Worker, ConnectionOptions, Queue } from 'bullmq';
 import axios from "axios";
 import { Slot } from './types';
-import { addNewSlots } from './worker/block_sequencer';
+import { fetchSlots } from './worker/block_sequencer';
 import { fetchAndProcessBlock } from './worker/block_integrated_fetcher_processor';
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -49,7 +49,7 @@ async function main() {
     let db: mariadb.Connection;
     try {
       db = await pool.getConnection();
-      await addNewSlots(db, solana, MAX_ADD_SLOT_PER_JOB);
+      await fetchSlots(db, solana, MAX_ADD_SLOT_PER_JOB);
     } catch (err) {
       console.log(err);
       throw err;

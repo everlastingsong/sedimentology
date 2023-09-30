@@ -3,7 +3,7 @@ import { AxiosInstance } from "axios";
 import { State, SlotProcessingState } from "../types";
 import invariant from "tiny-invariant";
 
-export async function addNewSlots(database: Connection, solana: AxiosInstance, limit: number) {
+export async function fetchSlots(database: Connection, solana: AxiosInstance, limit: number) {
   const [{ latestBlockSlot, latestBlockHeight }] = await database.query<State[]>('SELECT * FROM state');
 
   // getBlocksWithLimit
@@ -44,24 +44,3 @@ export async function addNewSlots(database: Connection, solana: AxiosInstance, l
   await database.batch("INSERT INTO slots (slot, blockHeight, state) VALUES (?, ?, ?)", newSlots.map(s => [s.slot, s.blockHeight, SlotProcessingState.Added]));
   await database.commit();
 }
-
-/*
-import { DB_CONNECTION_CONFIG, SOLANA_RPC_URL } from "../constants";
-import { createConnection } from "mariadb";
-import axios from "axios";
-
-const BLOCK_LIMIT = 5;
-
-async function main() {
-  const database = await createConnection(DB_CONNECTION_CONFIG);
-  const solana = axios.create({
-    baseURL: SOLANA_RPC_URL,
-    method: "post",
-  });
-
-  await addNewSlots(database, solana, BLOCK_LIMIT);
-  await database.end();
-}
-
-main();
-*/
