@@ -1,6 +1,6 @@
 import { Connection } from "mariadb";
 import { AxiosInstance } from "axios";
-import { Slot, SlotProcessingState } from "../common/types";
+import { Slot } from "../common/types";
 import { LRUCache } from "lru-cache";
 import invariant from "tiny-invariant";
 import { DecodedWhirlpoolInstruction, WhirlpoolTransactionDecoder } from "@yugure-orca/whirlpool-tx-decoder";
@@ -10,12 +10,14 @@ const WHIRLPOOL_PUBKEY = "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc";
 const pubkeyLRUCache = new LRUCache<string, boolean>({ max: 10_000 });
 
 export async function fetchAndProcessBlock(database: Connection, solana: AxiosInstance, slot: number) {
-  const [{ state, blockHeight }] = await database.query<Slot[]>('SELECT * FROM slots WHERE slot = ?', [slot]);
+  const [processingSlot] = await database.query<Slot[]>('SELECT * FROM admQueuedSlots WHERE slot = ?', [slot]);
 
-  if (state !== SlotProcessingState.Added) {
-    // already fetched
+  if (!processingSlot) {
+    // already processed
     return;
   }
+
+  const blockHeight = processingSlot.blockHeight;
 
   ////////////////////////////////////////////////////////////////////////////////
   // FETCHER
@@ -245,7 +247,8 @@ export async function fetchAndProcessBlock(database: Connection, solana: AxiosIn
   }
 
   // update slots
-  await database.query("UPDATE slots SET blockTime = ?, state = ? WHERE slot = ?", [blockTime, SlotProcessingState.Processed, slot]);
+  await database.query("DELETE FROM admQueuedSlots WHERE slot = ?", [slot]);
+  await database.query("INSERT INTO slots (slot, blockHeight, blockTime) VALUES(?, ?, ?)", [slot, blockHeight, blockTime]);
 
   await database.commit();
 }

@@ -1,6 +1,6 @@
 import mariadb from "mariadb";
 import { ConnectionOptions, Queue } from "bullmq";
-import { Slot, SlotProcessingState, WorkerQueueName } from "../common/types";
+import { Slot, WorkerQueueName } from "../common/types";
 import { program } from "commander";
 import { addConnectionOptions } from "./options";
 
@@ -65,7 +65,7 @@ async function main() {
       const enqueuedSlotSet = new Set<number>();
       enqueued.forEach(job => { enqueuedSlotSet.add(job.data); });
 
-      const rows = await db.query<Pick<Slot, "slot">[]>('SELECT slot FROM slots WHERE state = ? ORDER BY slot ASC LIMIT ?', [SlotProcessingState.Added, processorMax]);
+      const rows = await db.query<Pick<Slot, "slot">[]>('SELECT slot FROM admQueuedSlots ORDER BY slot ASC LIMIT ?', [processorMax]);
       rows.forEach(row => {
         if (!enqueuedSlotSet.has(row.slot)) {
           queueProcessor.add(`block_processor(${row.slot})`, row.slot);

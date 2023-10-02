@@ -1,9 +1,16 @@
 import { Connection } from "mariadb";
 import { AxiosInstance } from "axios";
-import { State, SlotProcessingState } from "../common/types";
+import { State } from "../common/types";
 import invariant from "tiny-invariant";
 
-export async function fetchSlots(database: Connection, solana: AxiosInstance, limit: number) {
+export async function fetchSlots(database: Connection, solana: AxiosInstance, limit: number, maxQueuedSlots: number) {
+  const [{ count }] = await database.query('SELECT COUNT(*) as count FROM admQueuedSlots');
+
+  if (count > maxQueuedSlots) {
+    // already enough queued slots
+    return;
+  }
+
   const [{ latestBlockSlot, latestBlockHeight }] = await database.query<State[]>('SELECT * FROM admState');
 
   // getBlocksWithLimit
@@ -41,6 +48,6 @@ export async function fetchSlots(database: Connection, solana: AxiosInstance, li
 
   await database.beginTransaction();
   await database.query("UPDATE admState SET latestBlockSlot = ?, latestBlockHeight = ? WHERE latestBlockSlot = ?", [newLatestSlot.slot, newLatestSlot.blockHeight, latestBlockSlot]);
-  await database.batch("INSERT INTO slots (slot, blockHeight, state) VALUES (?, ?, ?)", newSlots.map(s => [s.slot, s.blockHeight, SlotProcessingState.Added]));
+  await database.batch("INSERT INTO admQueuedSlots (slot, blockHeight) VALUES (?, ?)", newSlots.map(s => [s.slot, s.blockHeight]));
   await database.commit();
 }

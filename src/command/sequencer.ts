@@ -9,11 +9,13 @@ import { fetchSlots } from "../worker/fetch_slots";
 async function main() {
   addConnectionOptions(program, true, true, true);
   program
+    .option("-q --max-queued-slots <max>", "max queued slots", "10000")
     .option("-n --new-slot-per-fetch <max>", "new slots per fetch", "100")
     .option("-c --concurrency <max>", "concurrency", "1");
 
   const options = program.parse().opts();
 
+  const maxQueuedSlots = Number(options.maxQueuedSlots);
   const limit = Number(options.newSlotPerFetch);
   const concurrency = Number(options.concurrency);
 
@@ -45,7 +47,7 @@ async function main() {
     let db: mariadb.Connection;
     try {
       db = await pool.getConnection();
-      await fetchSlots(db, solana, limit);
+      await fetchSlots(db, solana, limit, maxQueuedSlots);
     } catch (err) {
       console.error(err);
       throw err;
