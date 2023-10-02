@@ -67,7 +67,7 @@ export async function fetchAndProcessBlock(database: Connection, solana: AxiosIn
   invariant(json.result.parentSlot, "parentSlot must exist");
   invariant(json.result.transactions, "transactions must exist");
 
-  invariant(json.result.blockHeight == blockHeight, "blockHeight must match");
+  invariant(json.result.blockHeight === blockHeight, "blockHeight must match");
 
   const blockTime = json.result.blockTime;
 
