@@ -242,7 +242,7 @@ CREATE TABLE `ixsInitializePositionBundle` (
   `keyPositionBundleOwner` int(11) unsigned NOT NULL,
   `keyFunder` int(11) unsigned NOT NULL,
   `keyTokenProgram` int(11) unsigned NOT NULL,
-  `keySytemProgram` int(11) unsigned NOT NULL,
+  `keySystemProgram` int(11) unsigned NOT NULL,
   `keyRent` int(11) unsigned NOT NULL,
   `keyAssociatedTokenProgram` int(11) unsigned NOT NULL,
   PRIMARY KEY (`txid`,`order`)
@@ -259,7 +259,7 @@ CREATE TABLE `ixsInitializePositionBundleWithMetadata` (
   `keyFunder` int(11) unsigned NOT NULL,
   `keyMetadataUpdateAuth` int(11) unsigned NOT NULL,
   `keyTokenProgram` int(11) unsigned NOT NULL,
-  `keySytemProgram` int(11) unsigned NOT NULL,
+  `keySystemProgram` int(11) unsigned NOT NULL,
   `keyRent` int(11) unsigned NOT NULL,
   `keyAssociatedTokenProgram` int(11) unsigned NOT NULL,
   `keyMetadataProgram` int(11) unsigned NOT NULL,
@@ -304,7 +304,7 @@ CREATE TABLE `ixsOpenBundledPosition` (
   `keyPositionBundleAuthority` int(11) unsigned NOT NULL,
   `keyWhirlpool` int(11) unsigned NOT NULL,
   `keyFunder` int(11) unsigned NOT NULL,
-  `keySytemProgram` int(11) unsigned NOT NULL,
+  `keySystemProgram` int(11) unsigned NOT NULL,
   `keyRent` int(11) unsigned NOT NULL,
   PRIMARY KEY (`txid`,`order`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -321,7 +321,7 @@ CREATE TABLE `ixsOpenPosition` (
   `keyPositionTokenAccount` int(11) unsigned NOT NULL,
   `keyWhirlpool` int(11) unsigned NOT NULL,
   `keyTokenProgram` int(11) unsigned NOT NULL,
-  `keySytemProgram` int(11) unsigned NOT NULL,
+  `keySystemProgram` int(11) unsigned NOT NULL,
   `keyRent` int(11) unsigned NOT NULL,
   `keyAssociatedTokenProgram` int(11) unsigned NOT NULL,
   PRIMARY KEY (`txid`,`order`)
@@ -340,7 +340,7 @@ CREATE TABLE `ixsOpenPositionWithMetadata` (
   `keyPositionTokenAccount` int(11) unsigned NOT NULL,
   `keyWhirlpool` int(11) unsigned NOT NULL,
   `keyTokenProgram` int(11) unsigned NOT NULL,
-  `keySytemProgram` int(11) unsigned NOT NULL,
+  `keySystemProgram` int(11) unsigned NOT NULL,
   `keyRent` int(11) unsigned NOT NULL,
   `keyAssociatedTokenProgram` int(11) unsigned NOT NULL,
   `keyMetadataProgram` int(11) unsigned NOT NULL,
