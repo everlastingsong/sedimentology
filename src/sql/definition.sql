@@ -15,17 +15,16 @@ CREATE TABLE `admState` (
   `latestBlockHeight` bigint(11) unsigned NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
-CREATE TABLE `slots` (
+CREATE TABLE `admQueuedSlots` (
   `slot` bigint(11) unsigned NOT NULL,
   `blockHeight` bigint(11) unsigned NOT NULL,
-  `blockTime` int(11) unsigned DEFAULT NULL,
-  `state` tinyint(11) unsigned NOT NULL DEFAULT 0 COMMENT '0: added, 1: fetched, 2: processed',
   PRIMARY KEY (`slot`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
-CREATE TABLE `blocks` (
+CREATE TABLE `slots` (
   `slot` bigint(11) unsigned NOT NULL,
-  `gzJsonString` longblob NOT NULL,
+  `blockHeight` bigint(11) unsigned NOT NULL,
+  `blockTime` int(11) unsigned NOT NULL,
   PRIMARY KEY (`slot`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
