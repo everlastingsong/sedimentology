@@ -10,7 +10,7 @@ SET NAMES utf8mb4;
 --
 -- TABLE
 --
-CREATE TABLE `state` (
+CREATE TABLE `admState` (
   `latestBlockSlot` bigint(11) unsigned NOT NULL,
   `latestBlockHeight` bigint(11) unsigned NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;

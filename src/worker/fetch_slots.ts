@@ -4,7 +4,7 @@ import { State, SlotProcessingState } from "../common/types";
 import invariant from "tiny-invariant";
 
 export async function fetchSlots(database: Connection, solana: AxiosInstance, limit: number) {
-  const [{ latestBlockSlot, latestBlockHeight }] = await database.query<State[]>('SELECT * FROM state');
+  const [{ latestBlockSlot, latestBlockHeight }] = await database.query<State[]>('SELECT * FROM admState');
 
   // getBlocksWithLimit
   // see: https://docs.solana.com/api/http#getblockswithlimit
@@ -40,7 +40,7 @@ export async function fetchSlots(database: Connection, solana: AxiosInstance, li
   const newLatestSlot = newSlots[newSlots.length - 1];
 
   await database.beginTransaction();
-  await database.query("UPDATE state SET latestBlockSlot = ?, latestBlockHeight = ? WHERE latestBlockSlot = ?", [newLatestSlot.slot, newLatestSlot.blockHeight, latestBlockSlot]);
+  await database.query("UPDATE admState SET latestBlockSlot = ?, latestBlockHeight = ? WHERE latestBlockSlot = ?", [newLatestSlot.slot, newLatestSlot.blockHeight, latestBlockSlot]);
   await database.batch("INSERT INTO slots (slot, blockHeight, state) VALUES (?, ?, ?)", newSlots.map(s => [s.slot, s.blockHeight, SlotProcessingState.Added]));
   await database.commit();
 }
