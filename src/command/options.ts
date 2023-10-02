@@ -6,7 +6,7 @@ export function addConnectionOptions(program: Command, mariadb: boolean = true, 
     .option("--mariadb-port <port>", "mariadb port", "3306")
     .option("--mariadb-user <user>", "mariadb user", "root")
     .option("--mariadb-password <password>", "mariadb password", "password")
-    .option("--mariadb-database <database>", "mariadb database", "solana");
+    .option("--mariadb-database <database>", "mariadb database", "whirlpool");
   redis && program
     .option("--redis-host <host>", "redis host", "localhost")
     .option("--redis-port <port>", "redis port", "6379")
