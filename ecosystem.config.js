@@ -11,7 +11,7 @@ module.exports = {
     {
       name: "sequencer",
       script: "./build/command/sequencer.js",
-      args: "--mariadb-database whirlpool --solana-rpc-url http://localhost:8899",
+      args: "--mariadb-database whirlpool --solana-rpc-url http://localhost:8899 -n 100",
       env: {
         NODE_ENV: "production",
       }
