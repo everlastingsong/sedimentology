@@ -522,19 +522,16 @@ CREATE TABLE `ixsUpdateFeesAndRewards` (
 -- PROCEDURE
 --
 DELIMITER ;;
-/*!50003 SET SESSION SQL_MODE=@OLD_SQL_MODE */;;
-/*!50003 SET SESSION SQL_MODE="STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION"*/;;
 
-/*!50003 CREATE*/ /*!50020 DEFINER=`root`@`localhost`*/ /*!50003 PROCEDURE `addPubkeyIfNotExists`(pubkeyBase58 VARCHAR(48))
+CREATE PROCEDURE addPubkeyIfNotExists(pubkeyBase58 VARCHAR(48))
 BEGIN
    DECLARE pubkeyId INT;
    SELECT id into pubkeyId FROM pubkeys WHERE pubkey = pubkeyBase58;
    IF pubkeyId IS NULL THEN
      INSERT INTO pubkeys (pubkey) VALUES (pubkeyBase58) ON DUPLICATE KEY UPDATE id = id;
    END IF;
-END */;;
+END;;
 
-/*!50003 SET SESSION SQL_MODE=@OLD_SQL_MODE */;;
 DELIMITER ;
 
 
@@ -542,24 +539,21 @@ DELIMITER ;
 -- FUNCTION
 --
 DELIMITER ;;
-/*!50003 SET SESSION SQL_MODE=@OLD_SQL_MODE */;;
-/*!50003 SET SESSION SQL_MODE="STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION"*/;;
 
-/*!50003 CREATE*/ /*!50020 DEFINER=`root`@`%`*/ /*!50003 FUNCTION `fromPubkeyBase58`(pubkeyBase58 VARCHAR(64)) RETURNS int(11)
+CREATE FUNCTION fromPubkeyBase58(pubkeyBase58 VARCHAR(64)) RETURNS int(11)
 BEGIN
    DECLARE pubkeyId INT;
    SELECT id into pubkeyId FROM pubkeys WHERE pubkey = pubkeyBase58;
    return pubkeyId;
-END */;;
+END;;
 
-/*!50003 CREATE*/ /*!50020 DEFINER=`root`@`%`*/ /*!50003 FUNCTION `toPubkeyBase58`(pubkeyId INT) RETURNS varchar(64) CHARSET utf8mb4 COLLATE utf8mb4_general_ci
+CREATE FUNCTION toPubkeyBase58(pubkeyId INT) RETURNS varchar(64) CHARSET utf8mb4 COLLATE utf8mb4_general_ci
 BEGIN
    DECLARE pubkeyBase58 VARCHAR(64);
    SELECT pubkey into pubkeyBase58 FROM pubkeys WHERE id = pubkeyId;
    return pubkeyBase58;
-END */;;
+END;;
 
-/*!50003 SET SESSION SQL_MODE=@OLD_SQL_MODE */;;
 DELIMITER ;
 
 
