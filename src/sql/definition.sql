@@ -13,34 +13,34 @@ SET NAMES utf8mb4;
 CREATE TABLE `admState` (
   `latestBlockSlot` bigint(11) unsigned NOT NULL,
   `latestBlockHeight` bigint(11) unsigned NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 CREATE TABLE `admQueuedSlots` (
   `slot` bigint(11) unsigned NOT NULL,
   `blockHeight` bigint(11) unsigned NOT NULL,
   PRIMARY KEY (`slot`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 CREATE TABLE `slots` (
   `slot` bigint(11) unsigned NOT NULL,
   `blockHeight` bigint(11) unsigned NOT NULL,
   `blockTime` int(11) unsigned NOT NULL,
   PRIMARY KEY (`slot`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 CREATE TABLE `txs` (
   `txid` bigint(11) unsigned NOT NULL,
-  `signature` varchar(96) NOT NULL,
+  `signature` varchar(96) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL,
   `payer` int(11) unsigned NOT NULL,
   PRIMARY KEY (`txid`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 CREATE TABLE `pubkeys` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `pubkey` varchar(64) NOT NULL,
+  `pubkey` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `pubkey` (`pubkey`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 CREATE TABLE `balances` (
   `txid` bigint(11) unsigned NOT NULL,
@@ -48,7 +48,7 @@ CREATE TABLE `balances` (
   `pre` bigint(11) unsigned NOT NULL,
   `post` bigint(11) unsigned NOT NULL,
   PRIMARY KEY (`txid`,`account`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 CREATE TABLE `ixsAdminIncreaseLiquidity` (
   `txid` bigint(11) unsigned NOT NULL,
@@ -58,7 +58,7 @@ CREATE TABLE `ixsAdminIncreaseLiquidity` (
   `keyWhirlpool` int(11) unsigned NOT NULL,
   `keyAuthority` int(11) unsigned NOT NULL,
   PRIMARY KEY (`txid`,`order`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 CREATE TABLE `ixsCloseBundledPosition` (
   `txid` bigint(11) unsigned NOT NULL,
@@ -70,7 +70,7 @@ CREATE TABLE `ixsCloseBundledPosition` (
   `keyPositionBundleAuthority` int(11) unsigned NOT NULL,
   `keyReceiver` int(11) unsigned NOT NULL,
   PRIMARY KEY (`txid`,`order`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 CREATE TABLE `ixsClosePosition` (
   `txid` bigint(11) unsigned NOT NULL,
@@ -82,7 +82,7 @@ CREATE TABLE `ixsClosePosition` (
   `keyPositionTokenAccount` int(11) unsigned NOT NULL,
   `keyTokenProgram` int(11) unsigned NOT NULL,
   PRIMARY KEY (`txid`,`order`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 CREATE TABLE `ixsCollectFees` (
   `txid` bigint(11) unsigned NOT NULL,
@@ -99,7 +99,7 @@ CREATE TABLE `ixsCollectFees` (
   `transferAmount0` bigint(11) unsigned NOT NULL COMMENT 'u64',
   `transferAmount1` bigint(11) unsigned NOT NULL COMMENT 'u64',
   PRIMARY KEY (`txid`,`order`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 CREATE TABLE `ixsCollectProtocolFees` (
   `txid` bigint(11) unsigned NOT NULL,
@@ -115,7 +115,7 @@ CREATE TABLE `ixsCollectProtocolFees` (
   `transferAmount0` bigint(11) unsigned NOT NULL COMMENT 'u64',
   `transferAmount1` bigint(11) unsigned NOT NULL COMMENT 'u64',
   PRIMARY KEY (`txid`,`order`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 CREATE TABLE `ixsCollectReward` (
   `txid` bigint(11) unsigned NOT NULL,
@@ -130,7 +130,7 @@ CREATE TABLE `ixsCollectReward` (
   `keyTokenProgram` int(11) unsigned NOT NULL,
   `transferAmount0` bigint(11) unsigned NOT NULL COMMENT 'u64',
   PRIMARY KEY (`txid`,`order`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 CREATE TABLE `ixsDecreaseLiquidity` (
   `txid` bigint(11) unsigned NOT NULL,
@@ -152,7 +152,7 @@ CREATE TABLE `ixsDecreaseLiquidity` (
   `transferAmount0` bigint(11) unsigned NOT NULL COMMENT 'u64',
   `transferAmount1` bigint(11) unsigned NOT NULL COMMENT 'u64',
   PRIMARY KEY (`txid`,`order`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 CREATE TABLE `ixsDeletePositionBundle` (
   `txid` bigint(11) unsigned NOT NULL,
@@ -164,7 +164,7 @@ CREATE TABLE `ixsDeletePositionBundle` (
   `keyReceiver` int(11) unsigned NOT NULL,
   `keyTokenProgram` int(11) unsigned NOT NULL,
   PRIMARY KEY (`txid`,`order`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 CREATE TABLE `ixsIncreaseLiquidity` (
   `txid` bigint(11) unsigned NOT NULL,
@@ -186,7 +186,7 @@ CREATE TABLE `ixsIncreaseLiquidity` (
   `transferAmount0` bigint(11) unsigned NOT NULL COMMENT 'u64',
   `transferAmount1` bigint(11) unsigned NOT NULL COMMENT 'u64',
   PRIMARY KEY (`txid`,`order`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 CREATE TABLE `ixsInitializeConfig` (
   `txid` bigint(11) unsigned NOT NULL,
@@ -199,7 +199,7 @@ CREATE TABLE `ixsInitializeConfig` (
   `keyFunder` int(11) unsigned NOT NULL,
   `keySystemProgram` int(11) unsigned NOT NULL,
   PRIMARY KEY (`txid`,`order`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 CREATE TABLE `ixsInitializeFeeTier` (
   `txid` bigint(11) unsigned NOT NULL,
@@ -212,7 +212,7 @@ CREATE TABLE `ixsInitializeFeeTier` (
   `keyFeeAuthority` int(11) unsigned NOT NULL,
   `keySystemProgram` int(11) unsigned NOT NULL,
   PRIMARY KEY (`txid`,`order`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 CREATE TABLE `ixsInitializePool` (
   `txid` bigint(11) unsigned NOT NULL,
@@ -231,7 +231,7 @@ CREATE TABLE `ixsInitializePool` (
   `keySystemProgram` int(11) unsigned NOT NULL,
   `keyRent` int(11) unsigned NOT NULL,
   PRIMARY KEY (`txid`,`order`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 CREATE TABLE `ixsInitializePositionBundle` (
   `txid` bigint(11) unsigned NOT NULL,
@@ -246,7 +246,7 @@ CREATE TABLE `ixsInitializePositionBundle` (
   `keyRent` int(11) unsigned NOT NULL,
   `keyAssociatedTokenProgram` int(11) unsigned NOT NULL,
   PRIMARY KEY (`txid`,`order`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 CREATE TABLE `ixsInitializePositionBundleWithMetadata` (
   `txid` bigint(11) unsigned NOT NULL,
@@ -264,7 +264,7 @@ CREATE TABLE `ixsInitializePositionBundleWithMetadata` (
   `keyAssociatedTokenProgram` int(11) unsigned NOT NULL,
   `keyMetadataProgram` int(11) unsigned NOT NULL,
   PRIMARY KEY (`txid`,`order`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 CREATE TABLE `ixsInitializeReward` (
   `txid` bigint(11) unsigned NOT NULL,
@@ -279,7 +279,7 @@ CREATE TABLE `ixsInitializeReward` (
   `keySystemProgram` int(11) unsigned NOT NULL,
   `keyRent` int(11) unsigned NOT NULL,
   PRIMARY KEY (`txid`,`order`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 CREATE TABLE `ixsInitializeTickArray` (
   `txid` bigint(11) unsigned NOT NULL,
@@ -290,7 +290,7 @@ CREATE TABLE `ixsInitializeTickArray` (
   `keyTickArray` int(11) unsigned NOT NULL,
   `keySystemProgram` int(11) unsigned NOT NULL,
   PRIMARY KEY (`txid`,`order`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 CREATE TABLE `ixsOpenBundledPosition` (
   `txid` bigint(11) unsigned NOT NULL,
@@ -307,7 +307,7 @@ CREATE TABLE `ixsOpenBundledPosition` (
   `keySystemProgram` int(11) unsigned NOT NULL,
   `keyRent` int(11) unsigned NOT NULL,
   PRIMARY KEY (`txid`,`order`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 CREATE TABLE `ixsOpenPosition` (
   `txid` bigint(11) unsigned NOT NULL,
@@ -325,7 +325,7 @@ CREATE TABLE `ixsOpenPosition` (
   `keyRent` int(11) unsigned NOT NULL,
   `keyAssociatedTokenProgram` int(11) unsigned NOT NULL,
   PRIMARY KEY (`txid`,`order`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 CREATE TABLE `ixsOpenPositionWithMetadata` (
   `txid` bigint(11) unsigned NOT NULL,
@@ -346,7 +346,7 @@ CREATE TABLE `ixsOpenPositionWithMetadata` (
   `keyMetadataProgram` int(11) unsigned NOT NULL,
   `keyMetadataUpdateAuth` int(11) unsigned NOT NULL,
   PRIMARY KEY (`txid`,`order`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 CREATE TABLE `ixsSetCollectProtocolFeesAuthority` (
   `txid` bigint(11) unsigned NOT NULL,
@@ -355,7 +355,7 @@ CREATE TABLE `ixsSetCollectProtocolFeesAuthority` (
   `keyCollectProtocolFeesAuthority` int(11) unsigned NOT NULL,
   `keyNewCollectProtocolFeesAuthority` int(11) unsigned NOT NULL,
   PRIMARY KEY (`txid`,`order`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 CREATE TABLE `ixsSetDefaultFeeRate` (
   `txid` bigint(11) unsigned NOT NULL,
@@ -365,7 +365,7 @@ CREATE TABLE `ixsSetDefaultFeeRate` (
   `keyFeeTier` int(11) unsigned NOT NULL,
   `keyFeeAuthority` int(11) unsigned NOT NULL,
   PRIMARY KEY (`txid`,`order`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 CREATE TABLE `ixsSetDefaultProtocolFeeRate` (
   `txid` bigint(11) unsigned NOT NULL,
@@ -374,7 +374,7 @@ CREATE TABLE `ixsSetDefaultProtocolFeeRate` (
   `keyWhirlpoolsConfig` int(11) unsigned NOT NULL,
   `keyFeeAuthority` int(11) unsigned NOT NULL,
   PRIMARY KEY (`txid`,`order`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 CREATE TABLE `ixsSetFeeAuthority` (
   `txid` bigint(11) unsigned NOT NULL,
@@ -383,7 +383,7 @@ CREATE TABLE `ixsSetFeeAuthority` (
   `keyFeeAuthority` int(11) unsigned NOT NULL,
   `keyNewFeeAuthority` int(11) unsigned NOT NULL,
   PRIMARY KEY (`txid`,`order`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 CREATE TABLE `ixsSetFeeRate` (
   `txid` bigint(11) unsigned NOT NULL,
@@ -393,7 +393,7 @@ CREATE TABLE `ixsSetFeeRate` (
   `keyWhirlpool` int(11) unsigned NOT NULL,
   `keyFeeAuthority` int(11) unsigned NOT NULL,
   PRIMARY KEY (`txid`,`order`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 CREATE TABLE `ixsSetProtocolFeeRate` (
   `txid` bigint(11) unsigned NOT NULL,
@@ -403,7 +403,7 @@ CREATE TABLE `ixsSetProtocolFeeRate` (
   `keyWhirlpool` int(11) unsigned NOT NULL,
   `keyFeeAuthority` int(11) unsigned NOT NULL,
   PRIMARY KEY (`txid`,`order`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 CREATE TABLE `ixsSetRewardAuthority` (
   `txid` bigint(11) unsigned NOT NULL,
@@ -413,7 +413,7 @@ CREATE TABLE `ixsSetRewardAuthority` (
   `keyRewardAuthority` int(11) unsigned NOT NULL,
   `keyNewRewardAuthority` int(11) unsigned NOT NULL,
   PRIMARY KEY (`txid`,`order`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 CREATE TABLE `ixsSetRewardAuthorityBySuperAuthority` (
   `txid` bigint(11) unsigned NOT NULL,
@@ -424,7 +424,7 @@ CREATE TABLE `ixsSetRewardAuthorityBySuperAuthority` (
   `keyRewardEmissionsSuperAuthority` int(11) unsigned NOT NULL,
   `keyNewRewardAuthority` int(11) unsigned NOT NULL,
   PRIMARY KEY (`txid`,`order`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 CREATE TABLE `ixsSetRewardEmissions` (
   `txid` bigint(11) unsigned NOT NULL,
@@ -435,7 +435,7 @@ CREATE TABLE `ixsSetRewardEmissions` (
   `keyRewardAuthority` int(11) unsigned NOT NULL,
   `keyRewardVault` int(11) unsigned NOT NULL,
   PRIMARY KEY (`txid`,`order`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 CREATE TABLE `ixsSetRewardEmissionsSuperAuthority` (
   `txid` bigint(11) unsigned NOT NULL,
@@ -444,7 +444,7 @@ CREATE TABLE `ixsSetRewardEmissionsSuperAuthority` (
   `keyRewardEmissionsSuperAuthority` int(11) unsigned NOT NULL,
   `keyNewRewardEmissionsSuperAuthority` int(11) unsigned NOT NULL,
   PRIMARY KEY (`txid`,`order`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 CREATE TABLE `ixsSwap` (
   `txid` bigint(11) unsigned NOT NULL,
@@ -468,7 +468,7 @@ CREATE TABLE `ixsSwap` (
   `transferAmount0` bigint(11) unsigned NOT NULL COMMENT 'u64',
   `transferAmount1` bigint(11) unsigned NOT NULL COMMENT 'u64',
   PRIMARY KEY (`txid`,`order`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 CREATE TABLE `ixsTwoHopSwap` (
   `txid` bigint(11) unsigned NOT NULL,
@@ -505,7 +505,7 @@ CREATE TABLE `ixsTwoHopSwap` (
   `transferAmount2` bigint(11) unsigned NOT NULL COMMENT 'u64',
   `transferAmount3` bigint(11) unsigned NOT NULL COMMENT 'u64',
   PRIMARY KEY (`txid`,`order`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 CREATE TABLE `ixsUpdateFeesAndRewards` (
   `txid` bigint(11) unsigned NOT NULL,
@@ -515,7 +515,7 @@ CREATE TABLE `ixsUpdateFeesAndRewards` (
   `keyTickArrayLower` int(11) unsigned NOT NULL,
   `keyTickArrayUpper` int(11) unsigned NOT NULL,
   PRIMARY KEY (`txid`,`order`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 
 --
@@ -523,10 +523,10 @@ CREATE TABLE `ixsUpdateFeesAndRewards` (
 --
 DELIMITER ;;
 
-CREATE PROCEDURE addPubkeyIfNotExists(pubkeyBase58 VARCHAR(48))
+CREATE PROCEDURE addPubkeyIfNotExists(pubkeyBase58 varchar(64) CHARSET utf8mb4 COLLATE utf8mb4_bin)
 BEGIN
    DECLARE pubkeyId INT;
-   SELECT id into pubkeyId FROM pubkeys WHERE pubkey = pubkeyBase58;
+   SELECT id INTO pubkeyId FROM pubkeys WHERE pubkey = pubkeyBase58 COLLATE utf8mb4_bin;
    IF pubkeyId IS NULL THEN
      INSERT INTO pubkeys (pubkey) VALUES (pubkeyBase58) ON DUPLICATE KEY UPDATE id = id;
    END IF;
@@ -540,18 +540,18 @@ DELIMITER ;
 --
 DELIMITER ;;
 
-CREATE FUNCTION fromPubkeyBase58(pubkeyBase58 VARCHAR(64)) RETURNS int(11)
+CREATE FUNCTION fromPubkeyBase58(pubkeyBase58 varchar(64) CHARSET utf8mb4 COLLATE utf8mb4_bin) RETURNS int(11)
 BEGIN
-   DECLARE pubkeyId INT;
-   SELECT id into pubkeyId FROM pubkeys WHERE pubkey = pubkeyBase58;
-   return pubkeyId;
+   DECLARE pubkeyId int;
+   SELECT id INTO pubkeyId FROM pubkeys WHERE pubkey = pubkeyBase58 COLLATE utf8mb4_bin;
+   RETURN pubkeyId;
 END;;
 
-CREATE FUNCTION toPubkeyBase58(pubkeyId INT) RETURNS varchar(64) CHARSET utf8mb4 COLLATE utf8mb4_general_ci
+CREATE FUNCTION toPubkeyBase58(pubkeyId int) RETURNS varchar(64) CHARSET utf8mb4 COLLATE utf8mb4_bin
 BEGIN
-   DECLARE pubkeyBase58 VARCHAR(64);
-   SELECT pubkey into pubkeyBase58 FROM pubkeys WHERE id = pubkeyId;
-   return pubkeyBase58;
+   DECLARE pubkeyBase58 varchar(64) CHARSET utf8mb4 COLLATE utf8mb4_bin;
+   SELECT pubkey INTO pubkeyBase58 FROM pubkeys WHERE id = pubkeyId;
+   RETURN pubkeyBase58;
 END;;
 
 DELIMITER ;
