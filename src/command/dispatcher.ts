@@ -33,8 +33,11 @@ async function main() {
     db: Number(options.redisDb),
   };
 
-  const queueSequencer = new Queue<undefined, void>(WorkerQueueName.SEQUENCER, { connection: redis });
-  const queueProcessor = new Queue<number, void>(WorkerQueueName.PROCESSOR, { connection: redis });
+  // keep latest 1000 completed/failed jobs only to prevent huge memory usage by Redis
+  const defaultJobOptions = { removeOnComplete: 1000, removeOnFail: 1000 };
+
+  const queueSequencer = new Queue<undefined, void>(WorkerQueueName.SEQUENCER, { connection: redis, defaultJobOptions });
+  const queueProcessor = new Queue<number, void>(WorkerQueueName.PROCESSOR, { connection: redis, defaultJobOptions });
 
   // reset queue
   console.info("reset queue...");
@@ -61,7 +64,7 @@ async function main() {
     try {
       db = await pool.getConnection();
 
-      const enqueued = await queueProcessor.getJobs(["waiting", "active"]);
+      const enqueued = await queueProcessor.getJobs(["waiting", "active", "delayed", "prioritized"]);
       const enqueuedSlotSet = new Set<number>();
       enqueued.forEach(job => { enqueuedSlotSet.add(job.data); });
 
