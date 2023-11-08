@@ -11,12 +11,14 @@ export async function fetchBackfillSlots(database: Connection, solana: AxiosInst
     return;
   }
 
-  const [{ maxBlockHeight, latestBlockSlot, latestBlockHeight }] = await database.query<BackfillState[]>('SELECT * FROM admBackfillState WHERE enabled IS TRUE AND latestBlockHeight < maxBlockHeight ORDER BY maxBlockHeight DESC LIMIT 1');
+  const [backfillState] = await database.query<BackfillState[]>('SELECT * FROM admBackfillState WHERE enabled IS TRUE AND latestBlockHeight < maxBlockHeight ORDER BY maxBlockHeight DESC LIMIT 1');
 
-  if (!maxBlockHeight) {
+  if (!backfillState) {
     // no backfill required
     return;
   }
+
+  const { maxBlockHeight, latestBlockSlot, latestBlockHeight } = backfillState;
 
   // getBlocksWithLimit
   // see: https://docs.solana.com/api/http#getblockswithlimit
