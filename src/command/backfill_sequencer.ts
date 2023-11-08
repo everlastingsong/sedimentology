@@ -4,7 +4,7 @@ import { ConnectionOptions, Worker } from "bullmq";
 import { WorkerQueueName } from "../common/types";
 import { program } from "commander";
 import { addConnectionOptions } from "./options";
-import { fetchSlots } from "../worker/fetch_slots";
+import { fetchBackfillSlots } from "../worker/fetch_backfill_slots";
 
 async function main() {
   addConnectionOptions(program, true, true, true);
@@ -40,13 +40,13 @@ async function main() {
   });
 
   console.log("build worker...");
-  const worker = new Worker<undefined, void>(WorkerQueueName.SEQUENCER, async (job) => {
+  const worker = new Worker<undefined, void>(WorkerQueueName.BACKFILL_SEQUENCER, async (job) => {
     console.info("job consuming...");
 
     let db: mariadb.Connection;
     try {
       db = await pool.getConnection();
-      await fetchSlots(db, solana, limit, maxQueuedSlots);
+      await fetchBackfillSlots(db, solana, limit, maxQueuedSlots);
     } catch (err) {
       console.error(err);
       throw err;

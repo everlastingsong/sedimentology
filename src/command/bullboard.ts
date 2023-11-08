@@ -22,6 +22,7 @@ const redis: ConnectionOptions = {
 };
 
 const queueSequencer = new Queue<undefined, void>(WorkerQueueName.SEQUENCER, { connection: redis });
+const queueBackfillSequencer = new Queue<undefined, void>(WorkerQueueName.BACKFILL_SEQUENCER, { connection: redis });
 const queueProcessor = new Queue<number, void>(WorkerQueueName.PROCESSOR, { connection: redis });
 
 const serverAdapter = new ExpressAdapter();
@@ -30,6 +31,7 @@ serverAdapter.setBasePath('/admin/queues');
 const { addQueue, removeQueue, setQueues, replaceQueues } = createBullBoard({
   queues: [
     new BullMQAdapter(queueSequencer),
+    new BullMQAdapter(queueBackfillSequencer),
     new BullMQAdapter(queueProcessor),
   ],
   serverAdapter: serverAdapter,
