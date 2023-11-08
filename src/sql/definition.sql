@@ -18,6 +18,7 @@ CREATE TABLE `admState` (
 CREATE TABLE `admQueuedSlots` (
   `slot` bigint(11) unsigned NOT NULL,
   `blockHeight` bigint(11) unsigned NOT NULL,
+  `enqueuedAt` bigint(11) unsigned NOT NULL,
   `isBackfillSlot` tinyint(1) unsigned NOT NULL,
   PRIMARY KEY (`slot`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;

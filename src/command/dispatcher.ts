@@ -37,15 +37,18 @@ async function main() {
   const defaultJobOptions = { removeOnComplete: 1000, removeOnFail: 1000 };
 
   const queueSequencer = new Queue<undefined, void>(WorkerQueueName.SEQUENCER, { connection: redis, defaultJobOptions });
+  const queueBackfillSequencer = new Queue<undefined, void>(WorkerQueueName.BACKFILL_SEQUENCER, { connection: redis, defaultJobOptions });
   const queueProcessor = new Queue<number, void>(WorkerQueueName.PROCESSOR, { connection: redis, defaultJobOptions });
 
   // reset queue
   console.info("reset queue...");
   await queueSequencer.obliterate({force: true});
+  await queueBackfillSequencer.obliterate({force: true});
   await queueProcessor.obliterate({force: true});
 
   console.info("add sequencer repeated job...");
   queueSequencer.add("sequencer repeated", undefined, { repeat: { every: dispatchInterval } });
+  queueBackfillSequencer.add("backfill sequencer repeated", undefined, { repeat: { every: dispatchInterval } });
 
   // graceful shutdown
   process.on("SIGINT", async () => {
@@ -61,6 +64,7 @@ async function main() {
 
     let db: mariadb.Connection;
     let processorAddJobCount = 0;
+    let processorAddBackfillJobCount = 0;
     try {
       db = await pool.getConnection();
 
@@ -68,11 +72,19 @@ async function main() {
       const enqueuedSlotSet = new Set<number>();
       enqueued.forEach(job => { enqueuedSlotSet.add(job.data); });
 
-      const rows = await db.query<Pick<Slot, "slot">[]>('SELECT slot FROM admQueuedSlots ORDER BY slot ASC LIMIT ?', [processorMax]);
+      const rows = await db.query<Pick<Slot, "slot">[]>('SELECT slot FROM admQueuedSlots WHERE isBackfillSlot IS FALSE ORDER BY slot ASC LIMIT ?', [processorMax]);
       rows.forEach(row => {
         if (!enqueuedSlotSet.has(row.slot)) {
-          queueProcessor.add(`block_processor(${row.slot})`, row.slot);
+          queueProcessor.add(`block_processor(slot=${row.slot},backfill=false)`, row.slot /* no priority means highest priority */);
           processorAddJobCount++;
+        }
+      });
+
+      const backfillRows = await db.query<Pick<Slot, "slot">[]>('SELECT slot FROM admQueuedSlots WHERE isBackfillSlot IS TRUE ORDER BY queuedAt ASC LIMIT ?', [processorMax]);
+      backfillRows.forEach(row => {
+        if (!enqueuedSlotSet.has(row.slot)) {
+          queueProcessor.add(`block_processor(slot=${row.slot},backfill=true)`, row.slot, { priority: 1 });
+          processorAddBackfillJobCount++;
         }
       });
     } catch (err) {
@@ -81,7 +93,7 @@ async function main() {
       db?.end();
     }
 
-    console.info("enqueue", processorAddJobCount);
+    console.info("enqueue", processorAddJobCount, processorAddBackfillJobCount);
 
     await sleep(dispatchInterval);
   }

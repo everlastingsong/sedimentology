@@ -1,5 +1,6 @@
 export enum WorkerQueueName {
   SEQUENCER = "sequencer",
+  BACKFILL_SEQUENCER = "backfill_sequencer",
   PROCESSOR = "processor",
 }
 
