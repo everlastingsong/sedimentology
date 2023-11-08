@@ -57,6 +57,6 @@ export async function fetchBackfillSlots(database: Connection, solana: AxiosInst
 
   await database.beginTransaction();
   await database.query("UPDATE admBackfillState SET latestBlockSlot = ?, latestBlockHeight = ? WHERE maxBlockHeight = ? AND latestBlockSlot = ?", [newLatestSlot.slot, newLatestSlot.blockHeight, maxBlockHeight, latestBlockSlot]);
-  await database.batch("INSERT INTO admQueuedSlots (slot, blockHeight, enqueuedAt, isBackfillSlot) VALUES (?, ?, UNIX_TIMESTAMP(), ?)", newSlots.map(s => [s.slot, s.blockHeight, true]));
+  await database.batch("INSERT INTO admQueuedSlots (slot, blockHeight, queuedAt, isBackfillSlot) VALUES (?, ?, UNIX_TIMESTAMP(), ?)", newSlots.map(s => [s.slot, s.blockHeight, true]));
   await database.commit();
 }

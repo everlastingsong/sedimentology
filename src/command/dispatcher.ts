@@ -80,7 +80,7 @@ async function main() {
         }
       });
 
-      const backfillRows = await db.query<Pick<Slot, "slot">[]>('SELECT slot FROM admQueuedSlots WHERE isBackfillSlot IS TRUE ORDER BY enqueuedAt ASC LIMIT ?', [processorMax]);
+      const backfillRows = await db.query<Pick<Slot, "slot">[]>('SELECT slot FROM admQueuedSlots WHERE isBackfillSlot IS TRUE ORDER BY queuedAt ASC LIMIT ?', [processorMax]);
       backfillRows.forEach(row => {
         if (!enqueuedSlotSet.has(row.slot)) {
           queueProcessor.add(`block_processor(slot=${row.slot},backfill=true)`, row.slot, { priority: 1 });
