@@ -18,7 +18,17 @@ CREATE TABLE `admState` (
 CREATE TABLE `admQueuedSlots` (
   `slot` bigint(11) unsigned NOT NULL,
   `blockHeight` bigint(11) unsigned NOT NULL,
+  `isBackfillSlot` tinyint(1) unsigned NOT NULL,
   PRIMARY KEY (`slot`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+
+CREATE TABLE `admBackfillState` (
+  `enabled` tinyint(1) unsigned NOT NULL,
+  `maxBlockHeight` bigint(11) unsigned NOT NULL,
+  `minBlockHeight` bigint(11) unsigned NOT NULL,
+  `latestBlockSlot` bigint(11) unsigned NOT NULL,
+  `latestBlockHeight` bigint(11) unsigned NOT NULL,
+  PRIMARY KEY (`maxBlockHeight`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 CREATE TABLE `slots` (

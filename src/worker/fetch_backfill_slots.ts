@@ -1,17 +1,22 @@
 import { Connection } from "mariadb";
 import { AxiosInstance } from "axios";
-import { State } from "../common/types";
+import { BackfillState } from "../common/types";
 import invariant from "tiny-invariant";
 
-export async function fetchSlots(database: Connection, solana: AxiosInstance, limit: number, maxQueuedSlots: number) {
-  const [{ count }] = await database.query('SELECT COUNT(*) as count FROM admQueuedSlots WHERE isBackfillSlot IS FALSE');
+export async function fetchBackfillSlots(database: Connection, solana: AxiosInstance, limit: number, maxQueuedSlots: number) {
+  const [{ count }] = await database.query('SELECT COUNT(*) as count FROM admQueuedSlots WHERE isBackfillSlot IS TRUE');
 
   if (count > maxQueuedSlots) {
     // already enough queued slots
     return;
   }
 
-  const [{ latestBlockSlot, latestBlockHeight }] = await database.query<State[]>('SELECT * FROM admState');
+  const [{ maxBlockHeight, latestBlockSlot, latestBlockHeight }] = await database.query<BackfillState[]>('SELECT * FROM admBackfillState WHERE enabled IS TRUE AND latestBlockHeight < maxBlockHeight ORDER BY maxBlockHeight DESC LIMIT 1');
+
+  if (!maxBlockHeight) {
+    // no backfill required
+    return;
+  }
 
   // getBlocksWithLimit
   // see: https://docs.solana.com/api/http#getblockswithlimit
@@ -43,11 +48,13 @@ export async function fetchSlots(database: Connection, solana: AxiosInstance, li
     return;
   }
 
-  const newSlots = slots.map((slot, delta) => ({ slot, blockHeight: latestBlockHeight + delta })).slice(1);
+  const newSlots = slots.map((slot, delta) => ({ slot, blockHeight: latestBlockHeight + delta }))
+    .filter(s => s.blockHeight <= maxBlockHeight)
+    .slice(1);
   const newLatestSlot = newSlots[newSlots.length - 1];
 
   await database.beginTransaction();
-  await database.query("UPDATE admState SET latestBlockSlot = ?, latestBlockHeight = ? WHERE latestBlockSlot = ?", [newLatestSlot.slot, newLatestSlot.blockHeight, latestBlockSlot]);
-  await database.batch("INSERT INTO admQueuedSlots (slot, blockHeight, isBackfillSlot) VALUES (?, ?, ?)", newSlots.map(s => [s.slot, s.blockHeight, false]));
+  await database.query("UPDATE admBackfillState SET latestBlockSlot = ?, latestBlockHeight = ? WHERE maxBlockHeight = ? AND latestBlockSlot = ?", [newLatestSlot.slot, newLatestSlot.blockHeight, maxBlockHeight, latestBlockSlot]);
+  await database.batch("INSERT INTO admQueuedSlots (slot, blockHeight, isBackfillSlot) VALUES (?, ?, ?)", newSlots.map(s => [s.slot, s.blockHeight, true]));
   await database.commit();
 }

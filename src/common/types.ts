@@ -13,3 +13,9 @@ export type Slot = {
   blockHeight: number;
   blockTimestamp: number | null;
 };
+
+export type BackfillState = {
+  maxBlockHeight: number;
+  latestBlockSlot: number;
+  latestBlockHeight: number;
+};
