@@ -10,7 +10,7 @@ async function main() {
   addConnectionOptions(program, true, true, true);
   program
     .option("-q --max-queued-slots <max>", "max queued slots", "10000")
-    .option("-n --new-slot-per-fetch <max>", "new slots per fetch", "1000");
+    .option("-n --new-slot-per-fetch <max>", "new slots per fetch", "500");
 
   const options = program.parse().opts();
 
