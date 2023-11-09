@@ -40,7 +40,7 @@ async function main() {
   });
 
   console.log("build worker...");
-  const worker = new Worker<undefined, void>(WorkerQueueName.BACKFILL_SEQUENCER, async (job) => {
+  const worker = new Worker<undefined, void>(WorkerQueueName.BACKFILL, async (job) => {
     console.info("job consuming...");
 
     let db: mariadb.Connection;
