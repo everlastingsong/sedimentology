@@ -37,18 +37,18 @@ async function main() {
   const defaultJobOptions = { removeOnComplete: 1000, removeOnFail: 1000 };
 
   const queueSequencer = new Queue<undefined, void>(WorkerQueueName.SEQUENCER, { connection: redis, defaultJobOptions });
-  const queueBackfillSequencer = new Queue<undefined, void>(WorkerQueueName.BACKFILL_SEQUENCER, { connection: redis, defaultJobOptions });
+  const queueBackfill = new Queue<undefined, void>(WorkerQueueName.BACKFILL, { connection: redis, defaultJobOptions });
   const queueProcessor = new Queue<number, void>(WorkerQueueName.PROCESSOR, { connection: redis, defaultJobOptions });
 
   // reset queue
   console.info("reset queue...");
   await queueSequencer.obliterate({force: true});
-  await queueBackfillSequencer.obliterate({force: true});
+  await queueBackfill.obliterate({force: true});
   await queueProcessor.obliterate({force: true});
 
-  console.info("add sequencer repeated job...");
+  console.info("add repeated job...");
   queueSequencer.add("sequencer repeated", undefined, { repeat: { every: dispatchInterval } });
-  queueBackfillSequencer.add("backfill sequencer repeated", undefined, { repeat: { every: dispatchInterval } });
+  queueBackfill.add("backfill repeated", undefined, { repeat: { every: dispatchInterval } });
 
   // graceful shutdown
   process.on("SIGINT", async () => {
@@ -80,7 +80,7 @@ async function main() {
         }
       });
 
-      const backfillRows = await db.query<Pick<Slot, "slot">[]>('SELECT slot FROM admQueuedSlots WHERE isBackfillSlot IS TRUE ORDER BY queuedAt ASC LIMIT ?', [processorMax]);
+      const backfillRows = await db.query<Pick<Slot, "slot">[]>('SELECT slot FROM admQueuedSlots WHERE isBackfillSlot IS TRUE ORDER BY slot DESC LIMIT ?', [processorMax]);
       backfillRows.forEach(row => {
         if (!enqueuedSlotSet.has(row.slot)) {
           queueProcessor.add(`block_processor(slot=${row.slot},backfill=true)`, row.slot, { priority: 1 });

@@ -1,6 +1,6 @@
 export enum WorkerQueueName {
   SEQUENCER = "sequencer",
-  BACKFILL_SEQUENCER = "backfill_sequencer",
+  BACKFILL = "backfill",
   PROCESSOR = "processor",
 }
 
@@ -15,8 +15,7 @@ export type Slot = {
   blockTimestamp: number | null;
 };
 
-export type BackfillState = {
-  maxBlockHeight: number;
-  latestBlockSlot: number;
-  latestBlockHeight: number;
+export type BackfillSlot = {
+  slot: number;
+  blockHeight: number;
 };

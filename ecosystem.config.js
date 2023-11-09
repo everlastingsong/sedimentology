@@ -17,8 +17,8 @@ module.exports = {
       }
     },
     {
-      name: "backfill-sequencer",
-      script: "./build/command/backfill_sequencer.js",
+      name: "backfill",
+      script: "./build/command/backfill.js",
       args: "--mariadb-database whirlpool --solana-rpc-url http://localhost:8899 -n 100",
       env: {
         NODE_ENV: "production",
