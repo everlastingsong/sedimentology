@@ -1,0 +1,35 @@
+
+# https://mysql.sql55.com/query/mysql-load-data-import-csv.php
+
+mysql> show variables like 'local_infile';
+# もし OFF だったら
+mysql> set local_infile=1
+mysql> show variables like 'local_infile';
+mysql> 
+load data local infile '/home/xxxx/xxx.csv'
+  into table whirlpool.admBackfillSlots
+  fields terminated by ','
+  lines terminated by '\n'
+  (slot, blockHeight);
+
+# ヘッダをスキップする場合は ignore 1 rows
+
+
+# CSV は BigQuery から作る
+# https://console.cloud.google.com/marketplace/product/bigquery-public-data/crypto-solana-mainnet-us?project=portfolio-313610
+
+SELECT
+  slot,
+  height,
+  UNIX_SECONDS(block_timestamp) as block_time
+FROM
+`bigquery-public-data.crypto_solana_mainnet_us.Blocks`
+WHERE
+slot >= 200824664 AND slot < 214824664   -- 📝必要な範囲を指定
+ORDER BY
+slot ASC;
+
+🚨 BigQuery の結果は歯抜けがある。height を出力し、連続していない箇所は getBlock で補完する
+
+👍 Sandbox の範囲でも利用できるのでクレジットカード不要
+📝 Google Drive に 1GB の CSV 単位で保存できる。1GB に収まる範囲のスロット数に留める (3-4ヶ月が目安)
