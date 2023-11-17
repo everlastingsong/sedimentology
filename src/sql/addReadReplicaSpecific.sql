@@ -162,7 +162,7 @@ BEGIN
    RETURN txid >> 24;
 END;;
 
-CREATE FUNCTION fromSlot(slot bigint) RETURNS bigint(11)
+CREATE FUNCTION toTxidBase(slot bigint) RETURNS bigint(11)
 DETERMINISTIC
 BEGIN
    RETURN slot << 24;
