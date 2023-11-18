@@ -168,6 +168,42 @@ BEGIN
    RETURN slot << 24;
 END;;
 
+CREATE FUNCTION getMaxSlot() RETURNS bigint(11)
+DETERMINISTIC
+BEGIN
+   DECLARE queuedMinSlot bigint;
+   DECLARE maxSlot bigint;
+   SELECT IFNULL((SELECT MIN(slot) FROM admQueuedSlots WHERE isBackfillSlot IS FALSE), 18446744073709551615) INTO queuedMinSlot;
+   SELECT MAX(slot) into maxSlot FROM slots WHERE slot < queuedMinSlot;
+   RETURN maxSlot;
+END;;
+
+CREATE FUNCTION getMinSlot() RETURNS bigint(11)
+DETERMINISTIC
+BEGIN
+   DECLARE queuedMaxSlot bigint;
+   DECLARE minSlot bigint;
+   SELECT IFNULL((SELECT MAX(slot) FROM admQueuedSlots WHERE isBackfillSlot IS TRUE), 0) INTO queuedMaxSlot;
+   SELECT MIN(slot) into minSlot FROM slots WHERE slot > queuedMaxSlot;
+   RETURN minSlot;
+END;;
+
+CREATE FUNCTION toBlockHeight(inputSlot bigint) RETURNS bigint(11)
+DETERMINISTIC
+BEGIN
+   DECLARE result bigint;
+   SELECT blockHeight INTO result FROM slots WHERE slot = inputSlot;
+   RETURN result;
+END;;
+
+CREATE FUNCTION toBlockTime(inputSlot bigint) RETURNS bigint(11)
+DETERMINISTIC
+BEGIN
+   DECLARE result bigint;
+   SELECT blockTime INTO result FROM slots WHERE slot = inputSlot;
+   RETURN result;
+END;;
+
 -- shorthand
 CREATE FUNCTION toSignature(txid bigint) RETURNS varchar(96) CHARSET utf8mb4 COLLATE utf8mb4_bin
 DETERMINISTIC
