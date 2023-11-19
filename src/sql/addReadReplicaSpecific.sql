@@ -140,7 +140,7 @@ CREATE INDEX keyPosition ON ixsUpdateFeesAndRewards (keyPosition);
 --
 DELIMITER ;;
 
-CREATE FUNCTION toSignatureBase58(txidBigint bigint) RETURNS varchar(96) CHARSET utf8mb4 COLLATE utf8mb4_bin
+CREATE FUNCTION toSignatureBase58(txidBigint bigint unsigned) RETURNS varchar(96) CHARSET utf8mb4 COLLATE utf8mb4_bin
 DETERMINISTIC
 BEGIN
    DECLARE signatureBase58 varchar(96) CHARSET utf8mb4 COLLATE utf8mb4_bin;
@@ -148,82 +148,82 @@ BEGIN
    RETURN signatureBase58;
 END;;
 
-CREATE FUNCTION fromSignatureBase58(signatureBase58 varchar(96) CHARSET utf8mb4 COLLATE utf8mb4_bin) RETURNS bigint(11)
+CREATE FUNCTION fromSignatureBase58(signatureBase58 varchar(96) CHARSET utf8mb4 COLLATE utf8mb4_bin) RETURNS bigint(11) unsigned
 DETERMINISTIC
 BEGIN
-   DECLARE txidBigint bigint;
+   DECLARE txidBigint bigint unsigned;
    SELECT txid INTO txidBigint FROM txs WHERE signature = signatureBase58;
    RETURN txidBigint;
 END;;
 
-CREATE FUNCTION toSlot(txid bigint) RETURNS bigint(11)
+CREATE FUNCTION toSlot(txid bigint unsigned) RETURNS bigint(11) unsigned
 DETERMINISTIC
 BEGIN
    RETURN txid >> 24;
 END;;
 
-CREATE FUNCTION toTxidBase(slot bigint) RETURNS bigint(11)
+CREATE FUNCTION toTxidBase(slot bigint unsigned) RETURNS bigint(11) unsigned
 DETERMINISTIC
 BEGIN
    RETURN slot << 24;
 END;;
 
-CREATE FUNCTION getMaxSlot() RETURNS bigint(11)
+CREATE FUNCTION getMaxSlot() RETURNS bigint(11) unsigned
 DETERMINISTIC
 BEGIN
-   DECLARE queuedMinSlot bigint;
-   DECLARE maxSlot bigint;
+   DECLARE queuedMinSlot bigint unsigned;
+   DECLARE maxSlot bigint unsigned;
    SELECT IFNULL((SELECT MIN(slot) FROM admQueuedSlots WHERE isBackfillSlot IS FALSE), 18446744073709551615) INTO queuedMinSlot;
    SELECT MAX(slot) into maxSlot FROM slots WHERE slot < queuedMinSlot;
    RETURN maxSlot;
 END;;
 
-CREATE FUNCTION getMinSlot() RETURNS bigint(11)
+CREATE FUNCTION getMinSlot() RETURNS bigint(11) unsigned
 DETERMINISTIC
 BEGIN
-   DECLARE queuedMaxSlot bigint;
-   DECLARE minSlot bigint;
+   DECLARE queuedMaxSlot bigint unsigned;
+   DECLARE minSlot bigint unsigned;
    SELECT IFNULL((SELECT MAX(slot) FROM admQueuedSlots WHERE isBackfillSlot IS TRUE), 0) INTO queuedMaxSlot;
    SELECT MIN(slot) into minSlot FROM slots WHERE slot > queuedMaxSlot;
    RETURN minSlot;
 END;;
 
-CREATE FUNCTION toBlockHeight(inputSlot bigint) RETURNS bigint(11)
+CREATE FUNCTION toBlockHeight(inputSlot bigint unsigned) RETURNS bigint(11) unsigned
 DETERMINISTIC
 BEGIN
-   DECLARE result bigint;
+   DECLARE result bigint unsigned;
    SELECT blockHeight INTO result FROM slots WHERE slot = inputSlot;
    RETURN result;
 END;;
 
-CREATE FUNCTION toBlockTime(inputSlot bigint) RETURNS bigint(11)
+CREATE FUNCTION toBlockTime(inputSlot bigint) RETURNS bigint(11) unsigned
 DETERMINISTIC
 BEGIN
-   DECLARE result bigint;
+   DECLARE result bigint unsigned;
    SELECT blockTime INTO result FROM slots WHERE slot = inputSlot;
    RETURN result;
 END;;
 
 -- shorthand
-CREATE FUNCTION toSignature(txid bigint) RETURNS varchar(96) CHARSET utf8mb4 COLLATE utf8mb4_bin
+CREATE FUNCTION toSignature(txid bigint unsigned) RETURNS varchar(96) CHARSET utf8mb4 COLLATE utf8mb4_bin
 DETERMINISTIC
 BEGIN
    RETURN toSignatureBase58(txid);
 END;;
 
-CREATE FUNCTION fromSignature(signature varchar(96) CHARSET utf8mb4 COLLATE utf8mb4_bin) RETURNS bigint(11)
+CREATE FUNCTION fromSignature(signature varchar(96) CHARSET utf8mb4 COLLATE utf8mb4_bin) RETURNS bigint(11) unsigned
 DETERMINISTIC
 BEGIN
    RETURN fromSignatureBase58(signature);
 END;;
 
-CREATE FUNCTION toPubkey(pubkeyId int) RETURNS varchar(64) CHARSET utf8mb4 COLLATE utf8mb4_bin
+CREATE FUNCTION toPubkey(pubkeyId int unsigned) RETURNS varchar(64) CHARSET utf8mb4 COLLATE utf8mb4_bin
 DETERMINISTIC
 BEGIN
    RETURN toPubkeyBase58(pubkeyId);
 END;;
 
-CREATE FUNCTION fromPubkey(pubkeyBase58 varchar(64) CHARSET utf8mb4 COLLATE utf8mb4_bin) RETURNS int(11)
+CREATE FUNCTION fromPubkey(pubkeyBase58 varchar(64) CHARSET utf8mb4 COLLATE utf8mb4_bin) RETURNS int(11) unsigned
 DETERMINISTIC
 BEGIN
    RETURN fromPubkeyBase58(pubkeyBase58);
