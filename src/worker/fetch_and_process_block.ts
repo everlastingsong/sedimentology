@@ -87,18 +87,25 @@ export async function fetchAndProcessBlock(database: Connection, solana: AxiosIn
     // drop failed transactions
     if (tx.meta.err !== null) return;
 
+    const staticPubkeys = tx.transaction.message.accountKeys;
+    const writablePubkeys = tx.meta.loadedAddresses.writable;
+    const readonlyPubkeys = tx.meta.loadedAddresses.readonly;
+    const allPubkeys: string[] = [...staticPubkeys, ...writablePubkeys, ...readonlyPubkeys];
+    const mentionWhirlpoolProgram = allPubkeys.includes(WHIRLPOOL_PUBKEY);
+
+    // drop transactions that did not mention whirlpool pubkey
+    if (!mentionWhirlpoolProgram) return;
+
+    // innerInstructions is required to extract all executed whirlpool instructions via CPI
+    // broken block does not have innerInstructions (null), it should be [] if no inner instructions exist
+    invariant(tx.meta.innerInstructions !== null, "innerInstructions must exist");
+
     const whirlpoolInstructions = WhirlpoolTransactionDecoder.decode({ result: tx }, WHIRLPOOL_PUBKEY);
     
-    // drop transactions that did not mention whirlpool pubkey
     // drop transactions that did not execute whirlpool instructions
     if (whirlpoolInstructions.length === 0) return;
 
     // now we are sure that this transaction executed at least one whirlpool instruction
-
-    const readonlyPubkeys = tx.meta.loadedAddresses.readonly;
-    const writablePubkeys = tx.meta.loadedAddresses.writable;
-    const staticPubkeys = tx.transaction.message.accountKeys;
-    const allPubkeys: string[] = [...staticPubkeys, ...readonlyPubkeys, ...writablePubkeys];
 
     // FOR txs table
     const txid = toTxID(slot, orderInBlock);

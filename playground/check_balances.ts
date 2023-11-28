@@ -33,12 +33,13 @@ export async function fetchAndProcessBlock(solana: AxiosInstance, slot: number, 
     // we want to obtain raw string data, so do not use any transformation
     transformResponse: (r) => r,
     // use gzip compression to reduce network traffic
+    /*
     headers: {
       "Content-Type": "application/json",
       "Accept-Encoding": "gzip",
-    },
+    },*/
     // axios automatically decompresses gzip response
-    decompress: true,
+    //decompress: true,
   });
 
   const originalData = response.data as string;
@@ -79,6 +80,9 @@ export async function fetchAndProcessBlock(solana: AxiosInstance, slot: number, 
   blockData.transactions.forEach((tx, orderInBlock) => {
     // drop failed transactions
     if (tx.meta.err !== null) return;
+
+    console.log(JSON.stringify(tx, null, 2));
+
 
     let whirlpoolInstructions: ReturnType<typeof WhirlpoolTransactionDecoder.decode>;
     try {
@@ -182,6 +186,16 @@ export async function fetchAndProcessBlock(solana: AxiosInstance, slot: number, 
       }
     });
 
+    console.log("static", staticPubkeys);
+    console.log("readonly", readonlyPubkeys);
+    console.log("writable", writablePubkeys);
+    console.log("all", allPubkeys);
+    console.log("touchedVaultPubkeys", Array.from(touchedVaultPubkeys));
+
+    console.log("tx", tx);
+    console.log("tx.transaction.message.accountKeys", tx.transaction.message.accountKeys);
+    console.log("tx.transaction.message.addressTableLookups", tx.transaction.message.addressTableLookups);
+
     const balances = Array.from(touchedVaultPubkeys).map((vault) => {
       const index = allPubkeys.findIndex((pubkey) => pubkey === vault);
       invariant(index !== -1, "index must exist");
@@ -232,30 +246,8 @@ async function main() {
     method: "post",
   });
 
-  // IDL operations
-  //await fetchAndProcessBlock(solana, 201197288, 183836170);
-  //await fetchAndProcessBlock(solana, 201196110, 183835003);
-  //await fetchAndProcessBlock(solana, 201196106, 183834999);
-  //await fetchAndProcessBlock(solana, 201196102, 183834995);
-  //await fetchAndProcessBlock(solana, 201196097, 183834990);
-  //await fetchAndProcessBlock(solana, 201196058, 183834951);
-  //await fetchAndProcessBlock(solana, 189247790, 172230136);
-  //await fetchAndProcessBlock(solana, 189247530, 172229880);
-  //await fetchAndProcessBlock(solana, 189247523, 172229877);
-  //await fetchAndProcessBlock(solana, 189247518, 172229872);
-  //await fetchAndProcessBlock(solana, 189247515, 172229869);
-  //await fetchAndProcessBlock(solana, 189247512, 172229866);  
-  //await fetchAndProcessBlock(solana, 189247507, 172229861);
-  //await fetchAndProcessBlock(solana, 189247503, 172229857);
-  //await fetchAndProcessBlock(solana, 189247497, 172229851);
-
-  // blocken blocks ? (following transfer instructions were not recorded ?)
-  // 140119956: leader = Cs23cJMRuahuKh5oNhVmLhM2UrtaZLULLF3HqrxfTnHc Jul 4, 2022 03:31:16
-  // 140119987: leader = 2iGccofYbsAwg9GnxJA45iRNoGQfR4oYNjnptSzNx217 Jul 4, 2022 03:31:39
-  // 140120077: leader = Hv3pt2LJTG3DhVKrAxDgyskkhkEL9GRGUuz3eRjFE3fw Jul 4, 2022 03:32:44
-  //await fetchAndProcessBlock(solana, 140120077, 126585032); // 2gHXD71MykV37Xbmi8QSERWnZTF3WXHxMJH8RWCo7XRsqrQxBfTg3grUGF4BxaMCNQGqnFHb9fbseC1Am8B5crsS
-  await fetchAndProcessBlock(solana, 140119987, 126584949);
-  //await fetchAndProcessBlock(solana, 140119956, 126584921);
+  await fetchAndProcessBlock(solana, 179206607, 162515557);
+ 
 
 }
 
