@@ -92,7 +92,7 @@ async function main() {
     // TODO: impl hasDeploy
     const hasDeploy = false;
     const hasTransaction = transactions.length > 0;
-    if (!hasDeploy && !hasTransaction) continue;
+    //if (!hasDeploy && !hasTransaction) continue;
 
     const balances = await db.query<Balance[]>('SELECT txid, toPubkey(account) as account, pre, post FROM balances WHERE txid BETWEEN ? AND ?', [minTxid, maxTxid]);
     balances.sort((a, b) => { if (a.txid < b.txid) return -1; if (a.txid > b.txid) return 1; return a.account.localeCompare(b.account); });
