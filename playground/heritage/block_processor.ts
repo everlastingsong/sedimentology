@@ -62,7 +62,7 @@ export async function processBlock(database: Connection, solana: AxiosInstance, 
     const readonlyPubkeys = tx.meta.loadedAddresses.readonly;
     const writablePubkeys = tx.meta.loadedAddresses.writable;
     const staticPubkeys = tx.transaction.message.accountKeys;
-    const allPubkeys: string[] = [...staticPubkeys, ...readonlyPubkeys, ...writablePubkeys];
+    const allPubkeys: string[] = [...staticPubkeys, ...writablePubkeys, ...readonlyPubkeys];
 
     // TODO: use bigint always (including JSONBigInt & Whirlpool instruction decoder) & mariaDB
 

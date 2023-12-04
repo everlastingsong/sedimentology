@@ -59,7 +59,7 @@ export async function processBlocks(database: Connection, solana: AxiosInstance)
       const writablePubkeys = tx.meta.loadedAddresses.writable;
       const staticPubkeys = tx.transaction.message.accountKeys;
 
-      const allPubkeys = [...staticPubkeys, ...readonlyPubkeys, ...writablePubkeys];
+      const allPubkeys = [...staticPubkeys, ...writablePubkeys, ...readonlyPubkeys];
       const touchWhirlpool = allPubkeys.includes(WHIRLPOOL_PUBKEY);
 
       if (!touchWhirlpool) continue;

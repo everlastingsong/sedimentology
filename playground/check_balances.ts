@@ -102,7 +102,7 @@ export async function fetchAndProcessBlock(solana: AxiosInstance, slot: number, 
     const readonlyPubkeys = tx.meta.loadedAddresses.readonly;
     const writablePubkeys = tx.meta.loadedAddresses.writable;
     const staticPubkeys = tx.transaction.message.accountKeys;
-    const allPubkeys: string[] = [...staticPubkeys, ...readonlyPubkeys, ...writablePubkeys];
+    const allPubkeys: string[] = [...staticPubkeys, ...writablePubkeys, ...readonlyPubkeys];
 
     // FOR txs table
     const txid = toTxID(slot, orderInBlock);

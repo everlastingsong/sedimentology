@@ -83,7 +83,7 @@ export async function fetchAndProcessBlock(solana: AxiosInstance, slot: number, 
     const readonlyPubkeys = tx.meta.loadedAddresses.readonly;
     const writablePubkeys = tx.meta.loadedAddresses.writable;
     const staticPubkeys = tx.transaction.message.accountKeys;
-    const allPubkeys: string[] = [...staticPubkeys, ...readonlyPubkeys, ...writablePubkeys];
+    const allPubkeys: string[] = [...staticPubkeys, ...writablePubkeys, ...readonlyPubkeys];
 
     const mentionToWhirlpoolProgram = allPubkeys.some((pubkey) => pubkey === WHIRLPOOL_PUBKEY);
     if (!mentionToWhirlpoolProgram) return;
