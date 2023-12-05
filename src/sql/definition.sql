@@ -57,6 +57,13 @@ CREATE TABLE `balances` (
   PRIMARY KEY (`txid`,`account`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
+CREATE TABLE `deployments` (
+  `txid` bigint(11) unsigned NOT NULL,
+  `order` tinyint(11) unsigned NOT NULL,
+  `programData` longblob NOT NULL,
+  PRIMARY KEY (`txid`,`order`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+
 CREATE TABLE `ixsAdminIncreaseLiquidity` (
   `txid` bigint(11) unsigned NOT NULL,
   `order` tinyint(11) unsigned NOT NULL,
