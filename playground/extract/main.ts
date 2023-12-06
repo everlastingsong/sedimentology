@@ -3,8 +3,9 @@ import { Balance, Instruction, MinMaxSlot, Slot, Transaction } from "./type";
 import invariant from "tiny-invariant";
 
 const SELECT_VWIXS_SQL = [
-  // 32 lines
-  "SELECT * FROM vwixsAdminIncreaseLiquidity WHERE txid BETWEEN ? and ?",
+  // 33 lines
+  "SELECT * FROM vwdeployments WHERE txid BETWEEN ? and ?",
+  "UNION ALL SELECT * FROM vwixsAdminIncreaseLiquidity WHERE txid BETWEEN ? and ?",
   "UNION ALL SELECT * FROM vwixsCloseBundledPosition WHERE txid BETWEEN ? and ?",
   "UNION ALL SELECT * FROM vwixsClosePosition WHERE txid BETWEEN ? and ?",
   "UNION ALL SELECT * FROM vwixsCollectFees WHERE txid BETWEEN ? and ?",
@@ -97,7 +98,7 @@ async function main() {
     const balances = await db.query<Balance[]>('SELECT txid, toPubkey(account) as account, pre, post FROM balances WHERE txid BETWEEN ? AND ?', [minTxid, maxTxid]);
     balances.sort((a, b) => { if (a.txid < b.txid) return -1; if (a.txid > b.txid) return 1; return a.account.localeCompare(b.account); });
 
-    const params = new Array(32).fill([minTxid, maxTxid]).flat();
+    const params = new Array(33).fill([minTxid, maxTxid]).flat();
     const instructions = await db.query<Instruction[]>(SELECT_VWIXS_SQL, params);
 
     // TODO: append deploy ix to instructions 
