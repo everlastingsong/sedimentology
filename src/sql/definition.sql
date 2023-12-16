@@ -12,7 +12,9 @@ SET NAMES utf8mb4;
 --
 CREATE TABLE `admState` (
   `latestBlockSlot` bigint(11) unsigned NOT NULL,
-  `latestBlockHeight` bigint(11) unsigned NOT NULL
+  `latestBlockHeight` bigint(11) unsigned NOT NULL,
+  `checkpointBlockSlot` bigint(11) unsigned NOT NULL,
+  `checkpointBlockHeight` bigint(11) unsigned NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 CREATE TABLE `admQueuedSlots` (
@@ -57,7 +59,7 @@ CREATE TABLE `balances` (
   PRIMARY KEY (`txid`,`account`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
-CREATE TABLE `deployments` (
+CREATE TABLE `ixsProgramDeploy` (
   `txid` bigint(11) unsigned NOT NULL,
   `order` tinyint(11) unsigned NOT NULL,
   `programData` longblob NOT NULL,
@@ -537,12 +539,38 @@ CREATE TABLE `ixsUpdateFeesAndRewards` (
 --
 DELIMITER ;;
 
-CREATE PROCEDURE addPubkeyIfNotExists(pubkeyBase58 varchar(64) CHARSET utf8mb4 COLLATE utf8mb4_bin)
+CREATE OR REPLACE PROCEDURE addPubkeyIfNotExists(pubkeyBase58 varchar(64) CHARSET utf8mb4 COLLATE utf8mb4_bin)
 BEGIN
    DECLARE pubkeyId INT;
    SELECT id INTO pubkeyId FROM pubkeys WHERE pubkey = pubkeyBase58 COLLATE utf8mb4_bin;
    IF pubkeyId IS NULL THEN
      INSERT INTO pubkeys (pubkey) VALUES (pubkeyBase58) ON DUPLICATE KEY UPDATE id = id;
+   END IF;
+END;;
+
+CREATE OR REPLACE PROCEDURE advanceCheckpoint()
+BEGIN
+   DECLARE currentCheckpointBlockSlot BIGINT UNSIGNED;
+   DECLARE minFetchingSlot BIGINT UNSIGNED;
+
+   DECLARE nextCheckpointBlockSlot BIGINT UNSIGNED;
+   DECLARE nextCheckpointBlockHeight BIGINT UNSIGNED;
+
+   SELECT checkpointBlockSlot INTO currentCheckpointBlockSlot FROM admState;
+
+   SELECT IFNULL(MIN(slot), 18446744073709551615) INTO minFetchingSlot FROM admQueuedSlots WHERE isBackfillSlot IS FALSE;
+
+   SELECT IFNULL(MAX(slot), currentCheckpointBlockSlot) INTO nextCheckpointBlockSlot FROM slots WHERE slot < minFetchingSlot;
+
+   IF nextCheckpointBlockSlot > currentCheckpointBlockSlot THEN
+      SELECT blockHeight INTO nextCheckpointBlockHeight FROM slots WHERE slot = nextCheckpointBlockSlot;
+
+      UPDATE
+         admState
+      SET
+         checkpointBlockSlot = GREATEST(nextCheckpointBlockSlot, checkpointBlockSlot),
+         checkpointBlockHeight = GREATEST(nextCheckpointBlockHeight, checkpointBlockHeight)
+      ;
    END IF;
 END;;
 
@@ -554,14 +582,14 @@ DELIMITER ;
 --
 DELIMITER ;;
 
-CREATE FUNCTION fromPubkeyBase58(pubkeyBase58 varchar(64) CHARSET utf8mb4 COLLATE utf8mb4_bin) RETURNS int(11)
+CREATE OR REPLACE FUNCTION fromPubkeyBase58(pubkeyBase58 varchar(64) CHARSET utf8mb4 COLLATE utf8mb4_bin) RETURNS int(11)
 BEGIN
    DECLARE pubkeyId int;
    SELECT id INTO pubkeyId FROM pubkeys WHERE pubkey = pubkeyBase58 COLLATE utf8mb4_bin;
    RETURN pubkeyId;
 END;;
 
-CREATE FUNCTION toPubkeyBase58(pubkeyId int) RETURNS varchar(64) CHARSET utf8mb4 COLLATE utf8mb4_bin
+CREATE OR REPLACE FUNCTION toPubkeyBase58(pubkeyId int) RETURNS varchar(64) CHARSET utf8mb4 COLLATE utf8mb4_bin
 BEGIN
    DECLARE pubkeyBase58 varchar(64) CHARSET utf8mb4 COLLATE utf8mb4_bin;
    SELECT pubkey INTO pubkeyBase58 FROM pubkeys WHERE id = pubkeyId;

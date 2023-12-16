@@ -121,10 +121,13 @@ export async function fetchAndProcessBlock(solana: AxiosInstance, slot: number, 
 
     // FOR balances table
     const touchedVaultPubkeys = new Set<string>();
+    const initializingVaultPubkeys = new Set<string>();
     whirlpoolInstructions.forEach((ix) => {
       switch (ix.name) {
         case "initializePool":
           // This instruction does not affect the token balance and preTokenBalance cannot be obtained.
+          initializingVaultPubkeys.add(ix.accounts.tokenVaultA);
+          initializingVaultPubkeys.add(ix.accounts.tokenVaultB);
           break;
         case "increaseLiquidity":
         case "decreaseLiquidity":
@@ -139,6 +142,7 @@ export async function fetchAndProcessBlock(solana: AxiosInstance, slot: number, 
         case "initializeReward":
         case "setRewardEmissions":
           // This instruction does not affect the token balance and preTokenBalance cannot be obtained.
+          initializingVaultPubkeys.add(ix.accounts.rewardVault);
           break;
         case "collectReward":
           touchedVaultPubkeys.add(ix.accounts.rewardVault);
@@ -182,10 +186,14 @@ export async function fetchAndProcessBlock(solana: AxiosInstance, slot: number, 
       }
     });
 
+    //console.log("TX", tx);
+    //console.log("preTokenBalances", tx.meta.preTokenBalances);
+
     const balances = Array.from(touchedVaultPubkeys).map((vault) => {
       const index = allPubkeys.findIndex((pubkey) => pubkey === vault);
       invariant(index !== -1, "index must exist");
-      const preBalance = tx.meta.preTokenBalances.find((b) => b.accountIndex === index)?.uiTokenAmount.amount;
+      const preBalance = tx.meta.preTokenBalances.find((b) => b.accountIndex === index)?.uiTokenAmount.amount
+        ?? (initializingVaultPubkeys.has(vault) ? "0" : undefined);
       invariant(preBalance, "preBalance must exist");
       const postBalance = tx.meta.postTokenBalances.find((b) => b.accountIndex === index)?.uiTokenAmount.amount;
       invariant(postBalance, "postBalance must exist");
@@ -206,13 +214,14 @@ export async function fetchAndProcessBlock(solana: AxiosInstance, slot: number, 
       balances,
       whirlpoolInstructions,
     });
+  });
 
-    processedTransactions.forEach((tx) => {
-      console.log(tx.signature);
-      tx.whirlpoolInstructions.forEach((ix) => {
-        console.log(`\t${ix.name}`);
-      });
+  processedTransactions.forEach((tx) => {
+    console.log(tx.signature);
+    tx.whirlpoolInstructions.forEach((ix) => {
+      console.log(`\t${ix.name}`);
     });
+    console.log("\t", tx.balances);
   });
 
   console.log("done");
@@ -254,8 +263,11 @@ async function main() {
   // 140119987: leader = 2iGccofYbsAwg9GnxJA45iRNoGQfR4oYNjnptSzNx217 Jul 4, 2022 03:31:39
   // 140120077: leader = Hv3pt2LJTG3DhVKrAxDgyskkhkEL9GRGUuz3eRjFE3fw Jul 4, 2022 03:32:44
   //await fetchAndProcessBlock(solana, 140120077, 126585032); // 2gHXD71MykV37Xbmi8QSERWnZTF3WXHxMJH8RWCo7XRsqrQxBfTg3grUGF4BxaMCNQGqnFHb9fbseC1Am8B5crsS
-  await fetchAndProcessBlock(solana, 140119987, 126584949);
+  //await fetchAndProcessBlock(solana, 140119987, 126584949);
   //await fetchAndProcessBlock(solana, 140119956, 126584921);
+
+  // 236095273 h:217490705
+  await fetchAndProcessBlock(solana, 236095273, 217490705);
 
 }
 
