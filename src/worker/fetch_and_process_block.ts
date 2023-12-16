@@ -267,6 +267,14 @@ export async function fetchAndProcessBlock(database: Connection, solana: AxiosIn
   await database.query("INSERT INTO slots (slot, blockHeight, blockTime) VALUES(?, ?, ?)", [slot, blockHeight, blockTime]);
 
   await database.commit();
+
+  // advance checkpoint
+  try {
+    await database.query("CALL advanceCheckpoint()");
+  } catch (err) {
+    // ignore but report
+    console.error("advanceCheckpoint failed:", err);
+  }
 }
 
 
