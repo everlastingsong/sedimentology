@@ -128,10 +128,13 @@ export async function fetchAndProcessBlock(database: Connection, solana: AxiosIn
 
     // FOR balances table
     const touchedVaultPubkeys = new Set<string>();
+    const initializingVaultPubkeys = new Set<string>();
     whirlpoolInstructions.forEach((ix) => {
       switch (ix.name) {
         case "initializePool":
           // This instruction does not affect the token balance and preTokenBalance cannot be obtained.
+          initializingVaultPubkeys.add(ix.accounts.tokenVaultA);
+          initializingVaultPubkeys.add(ix.accounts.tokenVaultB);
           break;
         case "increaseLiquidity":
         case "decreaseLiquidity":
@@ -144,6 +147,9 @@ export async function fetchAndProcessBlock(database: Connection, solana: AxiosIn
           touchedVaultPubkeys.add(ix.accounts.tokenVaultB);
           break;
         case "initializeReward":
+          // This instruction does not affect the token balance and preTokenBalance cannot be obtained.
+          initializingVaultPubkeys.add(ix.accounts.rewardVault);
+          break;
         case "setRewardEmissions":
           // This instruction does not affect the token balance and preTokenBalance cannot be obtained.
           break;
@@ -192,7 +198,10 @@ export async function fetchAndProcessBlock(database: Connection, solana: AxiosIn
     const balances = Array.from(touchedVaultPubkeys).map((vault) => {
       const index = allPubkeys.findIndex((pubkey) => pubkey === vault);
       invariant(index !== -1, "index must exist");
-      const preBalance = tx.meta.preTokenBalances.find((b) => b.accountIndex === index)?.uiTokenAmount.amount;
+      // edge case: 4rMJC56qibPjr1PDzX7bQFmBuG6yd9CcVysoFbo8dk1Sho2eehQt6Y8NhZFEFECNvnbcNN3evFE2X47ycLxyQmA
+      // initializePool + increaseLiquidity in the same transaction
+      const preBalance = tx.meta.preTokenBalances.find((b) => b.accountIndex === index)?.uiTokenAmount.amount
+        ?? (initializingVaultPubkeys.has(vault) ? "0" : undefined);
       invariant(preBalance, "preBalance must exist");
       const postBalance = tx.meta.postTokenBalances.find((b) => b.accountIndex === index)?.uiTokenAmount.amount;
       invariant(postBalance, "postBalance must exist");
