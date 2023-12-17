@@ -50,7 +50,7 @@ struct PubkeyAndDataBase64 {
 
 pub fn fetch_latest_replayed_date(database: &mut PooledConn) -> u32 {
     let date = database
-        .exec_first("SELECT latestReplayedDate FROM admState", Params::Empty)
+        .exec_first("SELECT latestReplayedDate FROM admReplayerState", Params::Empty)
         .unwrap();
     return date.unwrap();
 }
@@ -251,7 +251,7 @@ pub fn advance_state(state: &State, database: &mut PooledConn) -> Result<()> {
   ).unwrap();
 
   tx.exec_drop(
-    "UPDATE admState SET latestReplayedDate = :d",
+    "UPDATE admReplayerState SET latestReplayedDate = :d",
     params! {
         "d" => state.date,
     },
