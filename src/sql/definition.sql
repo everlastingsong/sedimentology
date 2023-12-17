@@ -14,7 +14,8 @@ CREATE TABLE `admState` (
   `latestBlockSlot` bigint(11) unsigned NOT NULL,
   `latestBlockHeight` bigint(11) unsigned NOT NULL,
   `checkpointBlockSlot` bigint(11) unsigned NOT NULL,
-  `checkpointBlockHeight` bigint(11) unsigned NOT NULL
+  `checkpointBlockHeight` bigint(11) unsigned NOT NULL,
+  `latestReplayedDate` int(11) unsigned NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 CREATE TABLE `admQueuedSlots` (
@@ -57,6 +58,14 @@ CREATE TABLE `balances` (
   `pre` bigint(11) unsigned NOT NULL,
   `post` bigint(11) unsigned NOT NULL,
   PRIMARY KEY (`txid`,`account`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+
+CREATE TABLE `states` (
+  `date` int(11) unsigned NOT NULL,
+  `slot` bigint(11) unsigned NOT NULL,
+  `programCompressedData` longblob NOT NULL COMMENT 'gzipped base64',
+  `accountCompressedData` longblob NOT NULL COMMENT 'gzipped csv(base58,base64)',
+  PRIMARY KEY (`date`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 CREATE TABLE `ixsProgramDeploy` (
@@ -620,9 +629,9 @@ SELECT
     t.blockHeight,
     t.blockTime
 FROM
-    whirlpool.slots t
+    slots t
 WHERE
-    t.slot <= (SELECT checkpointBlockSlot FROM whirlpool.admState)
+    t.slot <= (SELECT checkpointBlockSlot FROM admState)
 ;
 
 CREATE OR REPLACE VIEW vwJsonIxsProgramDeploy AS

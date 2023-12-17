@@ -131,3 +131,9 @@ dist
 
 # build
 build
+
+# playground
+playground/data_ignored
+
+# rust_worker
+rust_worker/target
