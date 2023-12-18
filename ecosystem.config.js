@@ -41,9 +41,17 @@ module.exports = {
       }
     },
     {
+      name: "replayer",
+      script: "./rust_worker/target/release/sedimentology-replayer",
+      args: "--mariadb-database whirlpool",
+      env: {
+        NODE_ENV: "production",
+      }
+    },
+    {
       name: "archiver-r2",
       script: "./rust_worker/target/release/sedimentology-archiver",
-      args: "--mariadb-database whirlpool --profile=r2 --rclone-remote-path=./rust_worker/tmp/dst --working-directory=./rust_worker/tmp",
+      args: "--mariadb-database whirlpool --profile=R2 --rclone-remote-path=./rust_worker/tmp/dst --working-directory=./rust_worker/tmp",
       env: {
         NODE_ENV: "production",
       }
