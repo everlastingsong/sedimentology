@@ -1,0 +1,17 @@
+[workspace]
+members = [
+  "sedimentology-replayer",
+  "sedimentology-archiver",
+]
+
+resolver = "2"
+
+[workspace.package]
+version = "0.0.1"
+edition = "2021"
+
+[workspace.dependencies]
+mysql = "24.0.0"
+clap = { version = "4.4.11", features = ["derive"] }
+
+
