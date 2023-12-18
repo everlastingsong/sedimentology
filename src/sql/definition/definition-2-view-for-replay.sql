@@ -47,7 +47,7 @@ SELECT
     t.order,
     "programDeploy" AS "ix",
     JSON_OBJECT(
-        'programData', REPLACE(TO_BASE64(t.programData), '\n', '') -- TO_BASE64 adds line breaks, so we remove them
+        'programData', t.programData
     ) AS "payload"
 FROM ixsProgramDeploy t;
 

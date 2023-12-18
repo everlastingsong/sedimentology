@@ -7,7 +7,6 @@
 
 -- slots
 CREATE UNIQUE INDEX blockHeight ON slots (blockHeight);
-CREATE INDEX blockTime ON slots (blockTime);
 
 -- txs
 CREATE UNIQUE INDEX signature ON txs (signature);
