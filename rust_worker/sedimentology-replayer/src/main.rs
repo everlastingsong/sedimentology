@@ -131,7 +131,7 @@ fn main() {
                     program_data: replay_engine.get_program_data().clone(),
                     accounts: replay_engine.get_accounts().clone(),
                 };
-                io::advance_state(&new_state, &mut conn).unwrap();
+                io::advance_replayer_state(&new_state, &mut conn).unwrap();
 
                 println!("saved state of {}", current_yyyymmdd_date);
             }

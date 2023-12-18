@@ -34,7 +34,8 @@ CREATE TABLE `slots` (
   `slot` bigint(11) unsigned NOT NULL,
   `blockHeight` bigint(11) unsigned NOT NULL,
   `blockTime` int(11) unsigned NOT NULL,
-  PRIMARY KEY (`slot`)
+  PRIMARY KEY (`slot`),
+  KEY `blockTime` (`blockTime`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 CREATE TABLE `txs` (

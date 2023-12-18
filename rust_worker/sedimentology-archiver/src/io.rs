@@ -4,10 +4,19 @@ use flate2::write::GzEncoder;
 use mysql::prelude::*;
 use mysql::*;
 use replay_engine::decoded_instructions::{from_json, DecodedInstruction};
+use replay_engine::replay_environment::solana_sdk::account::AccountSharedData;
 use replay_engine::types::AccountMap;
 use serde_derive::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::io::{Read, Write};
+use std::{
+  fs::File,
+  io::{BufRead, BufReader, BufWriter, LineWriter},
+};
+
+use crate::date;
+
+use crate::schema::{WhirlpoolState, WhirlpoolStateAccount, WhirlpoolTransaction, TransactionBalance, Transaction, TransactionInstruction};
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub struct Slot {
@@ -48,14 +57,25 @@ struct PubkeyAndDataBase64 {
     data_base64: String,
 }
 
+// TODO: refactor (dedup)
 pub fn fetch_latest_replayed_date(database: &mut PooledConn) -> u32 {
+  let date = database
+      .exec_first("SELECT latestReplayedDate FROM admReplayerState", Params::Empty)
+      .unwrap();
+  return date.unwrap();
+}
+
+pub fn fetch_latest_archived_date(profile: &String, database: &mut PooledConn) -> u32 {
     let date = database
-        .exec_first("SELECT latestReplayedDate FROM admReplayerState", Params::Empty)
+        .exec_first("SELECT latestArchivedDate FROM admArchiverState WHERE profile = :p",
+        params! {
+            "p" => profile,
+        })
         .unwrap();
     return date.unwrap();
 }
 
-pub fn fetch_state(date: u32, database: &mut PooledConn) -> State {
+pub fn export_state(yyyymmdd_date: u32, file: &String, database: &mut PooledConn) {
     let state: Option<(u32, u64, u64, i64, Vec<u8>, Vec<u8>)> = database
         .exec_first(
             "
@@ -72,7 +92,7 @@ pub fn fetch_state(date: u32, database: &mut PooledConn) -> State {
           states.date = :d
       ",
             params! {
-                "d" => date,
+                "d" => yyyymmdd_date,
             },
         )
         .unwrap();
@@ -94,50 +114,58 @@ pub fn fetch_state(date: u32, database: &mut PooledConn) -> State {
         .has_headers(false)
         .from_reader(account_data_gz);
 
-    let mut account_map = AccountMap::new();
-    account_csv_reader
+    let mut accounts: Vec<WhirlpoolStateAccount> = account_csv_reader
         .deserialize::<PubkeyAndDataBase64>()
-        .for_each(|row| {
+        .map(|row| {
             let row = row.unwrap();
             let data = BASE64_STANDARD.decode(row.data_base64).unwrap();
-            account_map.insert(row.pubkey, data);
-        });
+            WhirlpoolStateAccount {
+                pubkey: row.pubkey,
+                data,
+            }
+        })
+        .collect();
 
-    return State {
-        date,
+    accounts.sort_by(|a, b| a.pubkey.cmp(&b.pubkey));
+
+    let state: WhirlpoolState = WhirlpoolState {
         slot,
         block_height,
         block_time,
+        accounts,
         program_data,
-        accounts: account_map,
     };
+
+    save_to_whirlpool_state_file(file, &state);
 }
 
-pub fn fetch_slot_info(slot: u64, database: &mut PooledConn) -> Slot {
-    let mut slots = database
-        .exec_map(
-            "SELECT slot, blockHeight, blockTime FROM vwSlotsUntilCheckpoint WHERE slot = :s",
-            params! {
-                "s" => slot,
-            },
-            |(slot, block_height, block_time)| Slot {
-                slot,
-                block_height,
-                block_time,
-            },
-        )
-        .unwrap();
-
-    assert_eq!(slots.len(), 1);
-    return slots.pop().unwrap();
+// TODO: refactor(dedup) replayer::io
+pub fn save_to_whirlpool_state_file(file_path: &String, state: &WhirlpoolState) {
+  let file = File::create(file_path).unwrap();
+  let encoder = GzEncoder::new(file, flate2::Compression::default());
+  let writer = BufWriter::new(encoder);
+  serde_json::to_writer(writer, state).unwrap();
 }
 
-pub fn fetch_next_slot_infos(start_slot: u64, limit: u16, database: &mut PooledConn) -> Vec<Slot> {
-    let slots = database.exec_map(
-    "SELECT slot, blockHeight, blockTime FROM vwSlotsUntilCheckpoint WHERE slot >= :s ORDER BY slot ASC LIMIT :l",
+pub fn export_transaction(yyyymmdd_date: u32, file: &String, database: &mut PooledConn) {
+  let min_block_time = date::convert_yyyymmdd_to_unixtime(yyyymmdd_date);
+  let max_block_time = min_block_time + 24 * 60 * 60 - 1;
+
+  let slog_range: Option<(u64, u64)> = database.exec_first(
+    "SELECT min(slot), max(slot) FROM vwSlotsUntilCheckpoint WHERE blockTime BETWEEN :s AND :e",
     params! {
-        "s" => start_slot,
-        "l" => limit,
+        "s" => min_block_time,
+        "e" => max_block_time,
+    },
+  ).unwrap();
+
+  let (min_slot, max_slot) = slog_range.unwrap();
+
+  let slots = database.exec_map(
+    "SELECT slot, blockHeight, blockTime FROM vwSlotsUntilCheckpoint WHERE slot BETWEEN :s AND :e ORDER BY slot ASC",
+    params! {
+        "s" => min_slot,
+        "e" => max_slot,
     },
     |(slot, block_height, block_time)| {
         Slot {
@@ -148,15 +176,41 @@ pub fn fetch_next_slot_infos(start_slot: u64, limit: u16, database: &mut PooledC
     },
   ).unwrap();
 
-    assert!(slots.len() >= 1); // at least start_slot shoud be returned
-    return slots;
-}
+  let f = File::create(file).unwrap();
+  let encoder = GzEncoder::new(f, flate2::Compression::default());
+  let mut writer = LineWriter::new(encoder);
 
-pub fn fetch_instructions_in_slot(slot: u64, database: &mut PooledConn) -> Vec<Instruction> {
-    let txid_start = slot << 24;
-    let txid_end = ((slot + 1) << 24) - 1;
 
-    let mut ixs_in_slot = database.exec_map(
+  let chunk_size = 1000;
+  for chunk in slots.chunks(chunk_size) {
+    let chunk_min_slot = chunk[0].slot;
+    let chunk_max_slot = chunk[chunk.len() - 1].slot;
+    let chunk_min_txid = chunk_min_slot << 24;
+    let chunk_max_txid = ((chunk_max_slot + 1) << 24) - 1;
+
+    let mut transactions: Vec<(u64, String, String)> = database.exec(
+      "SELECT txid, signature, toPubkeyBase58(payer) as payer FROM txs WHERE txid BETWEEN :s AND :e",
+      params! {
+          "s" => chunk_min_txid,
+          "e" => chunk_max_txid,
+      },
+    ).unwrap();
+    transactions.sort_by(|a, b| a.0.cmp(&b.0));
+
+    let mut balances: Vec<(u64, String, u64, u64)> = database.exec(
+      "SELECT txid, toPubkeyBase58(account) as account, pre, post FROM balances WHERE txid BETWEEN :s AND :e",
+      params! {
+          "s" => chunk_min_txid,
+          "e" => chunk_max_txid,
+      },
+    ).unwrap();
+    balances.sort_by(|a, b| {
+      let txid =  a.0.cmp(&b.0);
+      let account = a.1.cmp(&b.1);
+      txid.then(account)
+    });
+
+    let mut instructions: Vec<(u64, u8, String, String)> = database.exec(
       // Since select for UNION ALL view of these views was too slow, I didn't use UNION ALL view.
       "
                     SELECT * FROM vwJsonIxsProgramDeploy WHERE txid BETWEEN :s and :e
@@ -194,66 +248,77 @@ pub fn fetch_instructions_in_slot(slot: u64, database: &mut PooledConn) -> Vec<I
           UNION ALL SELECT * FROM vwJsonIxsUpdateFeesAndRewards WHERE txid BETWEEN :s and :e",
           // no ORDER BY clause, sort at the client side
       params! {
-          "s" => txid_start,
-          "e" => txid_end,
+          "s" => chunk_min_txid,
+          "e" => chunk_max_txid,
       },
-      |(txid, order, ix, payload)| {
-          let ix_name: String = ix;
-          Instruction {
-              txid,
-              order,
-              ix_name: ix_name.clone(),
-              ix: from_json(&ix_name, &payload).unwrap(),
-          }
-      },
-  ).unwrap();
+    ).unwrap();
+    instructions.sort_by(|a, b| {
+      let txid =  a.0.cmp(&b.0);
+      let order = a.1.cmp(&b.1);
+      txid.then(order)
+    });
 
-    // order by txid, order
-    ixs_in_slot.sort_by_key(|ix| (ix.txid, ix.order));
+    for slot in chunk {
+      let mut txs: Vec<Transaction> = Vec::new();
+      let upper = (slot.slot + 1) << 24;
+      while transactions.len() > 0 && transactions[0].0 < upper {
+        let tx = transactions.remove(0);
+        let txid = tx.0;
+        let signature = tx.1;
+        let payer = tx.2;
 
-    return ixs_in_slot;
+        let mut balances_in_tx: Vec<TransactionBalance> = Vec::new();
+        while balances.len() > 0 && balances[0].0 == txid {
+          let balance = balances.remove(0);
+          balances_in_tx.push(TransactionBalance {
+            account: balance.1,
+            pre: balance.2,
+            post: balance.3,
+          });
+        }
+
+        let mut instructions_in_tx: Vec<TransactionInstruction> = Vec::new();
+        while instructions.len() > 0 && instructions[0].0 == txid {
+          let instruction = instructions.remove(0);
+          instructions_in_tx.push(TransactionInstruction {
+            name: instruction.2,
+            payload: serde_json::from_str(&instruction.3).unwrap(),
+          });
+        }
+
+        txs.push(Transaction {
+          index: u32::try_from(txid & 0xffffff).unwrap(),
+          signature,
+          payer,
+          balances: balances_in_tx,
+          instructions: instructions_in_tx,
+        });
+      }
+
+      let transaction: WhirlpoolTransaction = WhirlpoolTransaction {
+        slot: slot.slot,
+        block_height: slot.block_height,
+        block_time: slot.block_time,
+        transactions: txs,
+      };
+
+      let jsonl = serde_json::to_string(&transaction).unwrap();
+      writer.write_all(jsonl.as_bytes()).unwrap();
+      writer.write_all(b"\n").unwrap();
+    }
+  }
+
+  writer.flush().unwrap();
 }
 
-pub fn advance_replayer_state(state: &State, database: &mut PooledConn) -> Result<()> {
-  //  Vec<u8> -> base64 encoded -> gzip encoded
-  let program_data_base64 = BASE64_STANDARD.encode(&state.program_data);
-  let mut program_data_gz = GzEncoder::new(Vec::new(), flate2::Compression::default());
-  program_data_gz.write_all(program_data_base64.as_bytes()).unwrap();
-  let program_compressed_data = program_data_gz.finish().unwrap();
-
-  // AccountMap -> base58,base64 csv -> gzip encoded
-  let encoder = GzEncoder::new(Vec::new(), flate2::Compression::default());
-  let mut writer = csv::WriterBuilder::new()
-      .has_headers(false)
-      .from_writer(encoder);
-
-  for (pubkey, data) in state.accounts.iter() {
-      let data_base64 = BASE64_STANDARD.encode(data);
-      let row = PubkeyAndDataBase64 {
-          pubkey: pubkey.to_string(),
-          data_base64,
-      };
-      writer.serialize(row).unwrap();
-  }
-  writer.flush().unwrap();
-  let account_compressed_data = writer.into_inner().unwrap().finish().unwrap();
-
+pub fn advance_archiver_state(profile: &String, yyyymmdd_date: u32, database: &mut PooledConn) -> Result<()> {
   let mut tx = database.start_transaction(TxOpts::default()).unwrap();
 
   tx.exec_drop(
-      "INSERT INTO states (date, slot, programCompressedData, accountCompressedData) VALUES (:d, :s, :p, :a)",
-      params! {
-          "d" => state.date,
-          "s" => state.slot,
-          "p" => program_compressed_data,
-          "a" => account_compressed_data,
-      },
-  ).unwrap();
-
-  tx.exec_drop(
-    "UPDATE admReplayerState SET latestReplayedDate = :d",
+    "UPDATE admArchiverState SET latestArchivedDate = :d WHERE profile = :p",
     params! {
-        "d" => state.date,
+        "d" => yyyymmdd_date,
+        "p" => profile,
     },
   ).unwrap();
 

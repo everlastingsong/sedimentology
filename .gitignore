@@ -137,3 +137,5 @@ playground/data_ignored
 
 # rust_worker
 rust_worker/target
+rust_worker/tmp
+

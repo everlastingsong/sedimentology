@@ -10,6 +10,11 @@ SET NAMES utf8mb4;
 --
 -- TABLE
 --
+CREATE TABLE `admArchiverState` (
+  `profile` varchar(64) NOT NULL,
+  `latestArchivedDate` int(11) unsigned NOT NULL,
+  PRIMARY KEY (`profile`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
