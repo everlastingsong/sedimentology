@@ -14,6 +14,7 @@ export async function fetchAndProcessBlock(solana: AxiosInstance, slot: number, 
   // FETCHER
   ////////////////////////////////////////////////////////////////////////////////
 
+  console.log("fetching...", slot);
   // getBlock
   // see: https://docs.solana.com/api/http#getblock
   const response = await solana.request({
@@ -27,6 +28,7 @@ export async function fetchAndProcessBlock(solana: AxiosInstance, slot: number, 
           "encoding": "json",
           "transactionDetails": "full",
           "maxSupportedTransactionVersion": 0,
+          "rewards": false,
         },
       ],
     },
@@ -41,11 +43,14 @@ export async function fetchAndProcessBlock(solana: AxiosInstance, slot: number, 
     decompress: true,
   });
 
+  console.log("fetched");
   const originalData = response.data as string;
+  console.log(originalData);
 
   // JSON.parse cannot handle numbers > Number.MAX_SAFE_INTEGER precisely,
   // but it is okay because the ALL fields we are interested are < Number.MAX_SAFE_INTEGER or string.
   const json = JSON.parse(originalData);
+  console.log("parsed");
 
   // JSON RPC ensures that error field is used when error occurs
   if (json.error) {
@@ -117,11 +122,19 @@ async function main() {
   });
 
   // ok case with deprecated SOL/USDC
-  await fetchAndProcessBlock(solana, 175080156, 158784073);
+  //await fetchAndProcessBlock(solana, 175080156, 158784073);
 
   // slot 124,291,577 (height: 112,419,322): oracle アカウントが含まれない唯一の swap 命令を含む
   // signature: 42cBuWXNV1JMR6edFnup98JDq3wvrU3fdqwwp22CBNVw1QVoDEEeeU8Zs5NbSdXuBziBwGN9gMhu76mhsVkMRA9R
-  await fetchAndProcessBlock(solana, 124291577, 112419322);
+  //await fetchAndProcessBlock(solana, 124291577, 112419322);
+
+  // 255312004, 235801715
+
+  //await fetchAndProcessBlock(solana, 255645986, 236122877);
+
+  //await fetchAndProcessBlock(solana, 255312004, 235801715);
+  await fetchAndProcessBlock(solana, 258336004, 238690950);
+
 }
 
 main();
