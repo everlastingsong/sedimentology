@@ -2,6 +2,7 @@
 members = [
   "sedimentology-replayer",
   "sedimentology-archiver",
+  "sedimentology-distributor",
 ]
 
 resolver = "2"
