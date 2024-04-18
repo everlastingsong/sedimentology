@@ -1,3 +1,5 @@
+use std::sync::{atomic::AtomicU64, Arc};
+
 use axum::{
     routing::get,
     Router,
@@ -36,6 +38,9 @@ pub(crate) struct ServerState {
     // mysql::Pool is thread-safe cloneable smart pointer
     // https://docs.rs/mysql/24.0.0/mysql/struct.Pool.html
     pub pool: Pool,
+
+    pub request_id_state: Arc<AtomicU64>,
+    pub request_id_stream: Arc<AtomicU64>,
 }
 
 //#[tokio::main]
@@ -55,6 +60,8 @@ async fn main() {
 
     let state = ServerState {
         pool,
+        request_id_state: Arc::new(AtomicU64::new(0)),
+        request_id_stream: Arc::new(AtomicU64::new(0)),
     };
 
     let router = Router::new()
