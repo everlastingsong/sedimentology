@@ -95,6 +95,13 @@ pub fn fetch_state(yyyymmdd_date: u32, file_buffer: &mut Vec<u8>, database: &mut
     serde_json::to_writer(writer, &state).unwrap();  
 }
 
+pub fn fetch_checkpoint_block_slot(database: &mut PooledConn) -> u64 {
+  let slot = database
+      .exec_first("SELECT checkpointBlockSlot FROM admState", Params::Empty)
+      .unwrap();
+  return slot.unwrap();
+}
+
 pub fn fetch_next_slot_infos(start_slot: u64, limit: u16, database: &mut PooledConn) -> Vec<Slot> {
     let slots = database.exec_map(
     "SELECT slot, blockHeight, blockTime FROM vwSlotsUntilCheckpoint WHERE slot >= :s ORDER BY slot ASC LIMIT :l",
