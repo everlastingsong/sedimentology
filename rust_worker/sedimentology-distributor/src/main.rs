@@ -43,7 +43,6 @@ pub(crate) struct ServerState {
     pub request_id_stream: Arc<AtomicU64>,
 }
 
-//#[tokio::main]
 #[tokio::main]
 async fn main() {
     // connect to mariadb

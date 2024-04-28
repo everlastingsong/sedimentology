@@ -66,7 +66,8 @@ pub(crate) async fn handler(
         });
 
         const FETCH_CHUNK_SIZE: u16 = 128; // jsonl average length: 8KB
-        const NO_MORE_SLOT_DELAY_MS: u64 = 1000;
+        const NO_MORE_SLOT_WAIT_LIMIT_MS: u128 = 5000;
+        const NO_MORE_SLOT_WAIT_MS: u64 = 500;
         const REPORT_INTERVAL: std::time::Duration = std::time::Duration::from_secs(60);
         stream::unfold(initial_stream_state, move |mut stream_state| async move {
             if stream_state.last_reported.elapsed() >= REPORT_INTERVAL {
@@ -83,16 +84,24 @@ pub(crate) async fn handler(
             }
 
             if stream_state.fetched.is_empty() {
-                let mut conn = stream_state.pool.get_conn().unwrap();
-                let mut next_slots = io::fetch_next_slot_infos(stream_state.latest_fetched_slot, FETCH_CHUNK_SIZE, &mut conn);
-                
-                assert_eq!(next_slots[0].slot, stream_state.latest_fetched_slot);
-                next_slots.remove(0);
+                let trying = std::time::Instant::now();
+                loop {
+                    let mut conn = stream_state.pool.get_conn().unwrap();
+                    let mut next_slots = io::fetch_next_slot_infos(stream_state.latest_fetched_slot, FETCH_CHUNK_SIZE, &mut conn);
+                    
+                    assert_eq!(next_slots[0].slot, stream_state.latest_fetched_slot);
+                    next_slots.remove(0);
 
-                if next_slots.len() >= 1 {
-                    io::fetch_transactions(&next_slots, &mut stream_state.fetched, &mut conn);
+                    if next_slots.len() >= 1 {
+                        io::fetch_transactions(&next_slots, &mut stream_state.fetched, &mut conn);
+                        stream_state.latest_fetched_slot = next_slots[next_slots.len() - 1].slot;
+                        break;
+                    }
 
-                    stream_state.latest_fetched_slot = next_slots[next_slots.len() - 1].slot;
+                    tokio::time::sleep(Duration::from_millis(NO_MORE_SLOT_WAIT_MS)).await;
+                    if trying.elapsed().as_millis() >= NO_MORE_SLOT_WAIT_LIMIT_MS {
+                        break;
+                    }
                 }
             }
             
@@ -102,7 +111,6 @@ pub(crate) async fn handler(
                 Some((Event::default().data(data), stream_state))
             }
             else {
-                tokio::time::sleep(Duration::from_millis(NO_MORE_SLOT_DELAY_MS)).await;
                 stream_state.response_count_nodata += 1;
                 Some((Event::default().data(""), stream_state))
             }
