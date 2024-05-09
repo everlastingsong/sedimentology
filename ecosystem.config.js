@@ -59,7 +59,7 @@ module.exports = {
     {
       name: "distributor",
       script: "./rust_worker/target/release/sedimentology-distributor",
-      args: "--mariadb-database whirlpool --port 7683",
+      args: "--mariadb-database whirlpool --distributor-mariadb-database distributor",
       env: {
         NODE_ENV: "production",
       }
