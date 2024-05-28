@@ -124,10 +124,20 @@ export async function fetchAndProcessBlock(database: Connection, solana: AxiosIn
           touchedPubkeys.add(ix.data.feeAuthority);
           touchedPubkeys.add(ix.data.collectProtocolFeesAuthority);
           touchedPubkeys.add(ix.data.rewardEmissionsSuperAuthority);
-          // no break
+          break;
+        case "collectFeesV2":
+        case "collectProtocolFeesV2":
+        case "collectRewardV2":
+        case "increaseLiquidityV2":
+        case "decreaseLiquidityV2":
+        case "swapV2":
+        case "twoHopSwapV2":
+          ix.remainingAccounts.forEach((pubkey) => touchedPubkeys.add(pubkey));
+          break;
         default:
-          Object.values(ix.accounts).forEach((pubkey) => touchedPubkeys.add(pubkey));
+          break;
       }
+      Object.values(ix.accounts).forEach((pubkey) => touchedPubkeys.add(pubkey));
     });
 
     // FOR balances table
@@ -136,31 +146,40 @@ export async function fetchAndProcessBlock(database: Connection, solana: AxiosIn
     whirlpoolInstructions.forEach((ix) => {
       switch (ix.name) {
         case "initializePool":
+        case "initializePoolV2":
           // This instruction does not affect the token balance and preTokenBalance cannot be obtained.
           initializingVaultPubkeys.add(ix.accounts.tokenVaultA);
           initializingVaultPubkeys.add(ix.accounts.tokenVaultB);
           break;
         case "increaseLiquidity":
         case "decreaseLiquidity":
+        case "increaseLiquidityV2":
+        case "decreaseLiquidityV2":
           touchedVaultPubkeys.add(ix.accounts.tokenVaultA);
           touchedVaultPubkeys.add(ix.accounts.tokenVaultB);
           break;
         case "collectFees":
         case "collectProtocolFees":
+        case "collectFeesV2":
+        case "collectProtocolFeesV2":
           touchedVaultPubkeys.add(ix.accounts.tokenVaultA);
           touchedVaultPubkeys.add(ix.accounts.tokenVaultB);
           break;
         case "initializeReward":
+        case "initializeRewardV2":
           // This instruction does not affect the token balance and preTokenBalance cannot be obtained.
           initializingVaultPubkeys.add(ix.accounts.rewardVault);
           break;
         case "setRewardEmissions":
+        case "setRewardEmissionsV2":
           // This instruction does not affect the token balance and preTokenBalance cannot be obtained.
           break;
         case "collectReward":
+        case "collectRewardV2":
           touchedVaultPubkeys.add(ix.accounts.rewardVault);
           break;
         case "swap":
+        case "swapV2":
           touchedVaultPubkeys.add(ix.accounts.tokenVaultA);
           touchedVaultPubkeys.add(ix.accounts.tokenVaultB);
           break;
@@ -169,6 +188,12 @@ export async function fetchAndProcessBlock(database: Connection, solana: AxiosIn
           touchedVaultPubkeys.add(ix.accounts.tokenVaultOneB);
           touchedVaultPubkeys.add(ix.accounts.tokenVaultTwoA);
           touchedVaultPubkeys.add(ix.accounts.tokenVaultTwoB);
+          break;
+        case "twoHopSwapV2":
+          touchedVaultPubkeys.add(ix.accounts.tokenVaultOneInput);
+          touchedVaultPubkeys.add(ix.accounts.tokenVaultOneIntermediate);
+          touchedVaultPubkeys.add(ix.accounts.tokenVaultTwoIntermediate);
+          touchedVaultPubkeys.add(ix.accounts.tokenVaultTwoOutput);
           break;
         case "adminIncreaseLiquidity":
         case "closeBundledPosition":
@@ -192,6 +217,11 @@ export async function fetchAndProcessBlock(database: Connection, solana: AxiosIn
         case "setRewardAuthorityBySuperAuthority":
         case "setRewardEmissionsSuperAuthority":
         case "updateFeesAndRewards":
+        case "initializeConfigExtension":
+        case "initializeTokenBadge":
+        case "deleteTokenBadge":
+        case "setConfigExtensionAuthority":
+        case "setTokenBadgeAuthority":
           // This instruction does not affect the token balance.
           break;
         default:
@@ -829,6 +859,134 @@ async function insertInstruction(txid: BigInt, order: number, ix: DecodedWhirlpo
         ix.accounts.whirlpoolsConfig,
         ix.accounts.rewardEmissionsSuperAuthority,
         ix.accounts.newRewardEmissionsSuperAuthority,
+        // no transfer
+      ]);
+    case "collectFeesV2": throw new Error("not implemented");
+    case "collectProtocolFeesV2": throw new Error("not implemented");
+    case "collectRewardV2": throw new Error("not implemented");
+    case "increaseLiquidityV2": throw new Error("not implemented");
+    case "decreaseLiquidityV2": throw new Error("not implemented");
+    case "swapV2": throw new Error("not implemented");
+    case "twoHopSwapV2": throw new Error("not implemented");
+    case "initializePoolV2":
+      return database.query(buildSQL(ix.name, 2, 14, 0), [
+        txid,
+        order,
+        // data
+        ix.data.tickSpacing,
+        BigInt(ix.data.initialSqrtPrice.toString()),
+        // key
+        ix.accounts.whirlpoolsConfig,
+        ix.accounts.tokenMintA,
+        ix.accounts.tokenMintB,
+        ix.accounts.tokenBadgeA,
+        ix.accounts.tokenBadgeB,
+        ix.accounts.funder,
+        ix.accounts.whirlpool,
+        ix.accounts.tokenVaultA,
+        ix.accounts.tokenVaultB,
+        ix.accounts.feeTier,
+        ix.accounts.tokenProgramA,
+        ix.accounts.tokenProgramB,
+        ix.accounts.systemProgram,
+        ix.accounts.rent,
+        // no transfer
+      ]);
+    case "initializeRewardV2":
+      return database.query(buildSQL(ix.name, 1, 9, 0), [
+        txid,
+        order,
+        // data
+        ix.data.rewardIndex,
+        // key
+        ix.accounts.rewardAuthority,
+        ix.accounts.funder,
+        ix.accounts.whirlpool,
+        ix.accounts.rewardMint,
+        ix.accounts.rewardTokenBadge,
+        ix.accounts.rewardVault,
+        ix.accounts.rewardTokenProgram,
+        ix.accounts.systemProgram,
+        ix.accounts.rent,
+        // no transfer
+      ]);
+    case "setRewardEmissionsV2":
+      return database.query(buildSQL(ix.name, 2, 3, 0), [
+        txid,
+        order,
+        // data
+        ix.data.rewardIndex,
+        BigInt(ix.data.emissionsPerSecondX64.toString()),
+        // key
+        ix.accounts.whirlpool,
+        ix.accounts.rewardAuthority,
+        ix.accounts.rewardVault,
+        // no transfer
+      ]);
+    case "initializeConfigExtension":
+      return database.query(buildSQL(ix.name, 0, 5, 0), [
+        txid,
+        order,
+        // no data
+        // key
+        ix.accounts.whirlpoolsConfig,
+        ix.accounts.whirlpoolsConfigExtension,
+        ix.accounts.funder,
+        ix.accounts.feeAuthority,
+        ix.accounts.systemProgram,
+        // no transfer
+      ]);
+    case "initializeTokenBadge":
+      return database.query(buildSQL(ix.name, 0, 7, 0), [
+        txid,
+        order,
+        // no data
+        // key
+        ix.accounts.whirlpoolsConfig,
+        ix.accounts.whirlpoolsConfigExtension,
+        ix.accounts.tokenBadgeAuthority,
+        ix.accounts.tokenMint,
+        ix.accounts.tokenBadge,
+        ix.accounts.funder,
+        ix.accounts.systemProgram,
+        // no transfer
+      ]);
+    case "deleteTokenBadge":
+      return database.query(buildSQL(ix.name, 0, 6, 0), [
+        txid,
+        order,
+        // no data
+        // key
+        ix.accounts.whirlpoolsConfig,
+        ix.accounts.whirlpoolsConfigExtension,
+        ix.accounts.tokenBadgeAuthority,
+        ix.accounts.tokenMint,
+        ix.accounts.tokenBadge,
+        ix.accounts.receiver,
+        // no transfer
+      ]);
+    case "setConfigExtensionAuthority":
+      return database.query(buildSQL(ix.name, 0, 4, 0), [
+        txid,
+        order,
+        // no data
+        // key
+        ix.accounts.whirlpoolsConfig,
+        ix.accounts.whirlpoolsConfigExtension,
+        ix.accounts.configExtensionAuthority,
+        ix.accounts.newConfigExtensionAuthority,
+        // no transfer
+      ]);
+    case "setTokenBadgeAuthority":
+      return database.query(buildSQL(ix.name, 0, 4, 0), [
+        txid,
+        order,
+        // no data
+        // key
+        ix.accounts.whirlpoolsConfig,
+        ix.accounts.whirlpoolsConfigExtension,
+        ix.accounts.configExtensionAuthority,
+        ix.accounts.newTokenBadgeAuthority,
         // no transfer
       ]);
     default:
