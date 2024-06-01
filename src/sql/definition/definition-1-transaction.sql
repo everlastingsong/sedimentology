@@ -597,6 +597,129 @@ BEGIN
    RETURN pubkeyBase58;
 END;;
 
+CREATE OR REPLACE FUNCTION encodeU32(n int unsigned) RETURNS varbinary(4)
+BEGIN
+    -- little endian
+    RETURN CONCAT(
+        CHAR(n MOD 256),
+        CHAR(FLOOR(n / 256) MOD 256),
+        CHAR(FLOOR(n / 65536) MOD 256),
+        CHAR(FLOOR(n / 16777216) MOD 256)
+    );
+END;;
+
+CREATE OR REPLACE FUNCTION decodeU32(a varbinary(4)) RETURNS int unsigned
+BEGIN
+    -- little endian
+    RETURN
+        ORD(SUBSTRING(a, 1, 1)) +
+        ORD(SUBSTRING(a, 2, 1)) * 256 +
+        ORD(SUBSTRING(a, 3, 1)) * 65536 +
+        ORD(SUBSTRING(a, 4, 1)) * 16777216;
+END;;
+
+CREATE OR REPLACE FUNCTION encodeBase58PubkeyArray(pubkeys JSON)
+RETURNS VARBINARY(256)
+BEGIN
+    DECLARE i INT DEFAULT 0;
+    DECLARE arrayLength INT;
+    DECLARE pubkeyBase58 VARCHAR(64);
+    DECLARE pubkeyId INT;
+    DECLARE encoded VARBINARY(256) DEFAULT '';
+
+    SET arrayLength = JSON_LENGTH(pubkeys);
+    IF arrayLength > 64 THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'pubkeys length exceeds 64';
+    END IF;
+
+    WHILE i < arrayLength DO
+        SET pubkeyBase58 = CAST(JSON_UNQUOTE(JSON_EXTRACT(pubkeys, CONCAT('$[', i, ']'))) AS VARCHAR(64));
+        SET pubkeyId = fromPubkeyBase58(pubkeyBase58);
+        IF pubkeyId IS NULL THEN
+            SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'unknown pubkey detected';
+        END IF;
+        SET encoded = CONCAT(encoded, encodeU32(pubkeyId));
+        SET i = i + 1;
+    END WHILE;
+
+    RETURN encoded;
+END;;
+
+CREATE OR REPLACE FUNCTION decodeBase58PubkeyArray(encoded varbinary(256))
+RETURNS JSON
+BEGIN
+    DECLARE i INT DEFAULT 0;
+    DECLARE arrayLength INT;
+    DECLARE pubkeyBase58 VARCHAR(64);
+    DECLARE pubkeyId INT UNSIGNED;
+    DECLARE pubkeys JSON DEFAULT '[]';
+
+    SET arrayLength = LENGTH(encoded) / 4;
+    WHILE i < arrayLength DO
+        SET pubkeyId = decodeU32(SUBSTRING(encoded, i * 4 + 1, 4));
+        SET pubkeyBase58 = toPubkeyBase58(pubkeyId);
+        IF pubkeyBase58 IS NULL THEN
+            SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'unknown pubkey detected';
+        END IF;
+
+        SET pubkeys = JSON_ARRAY_APPEND(pubkeys, '$', pubkeyBase58);
+        SET i = i + 1;
+    END WHILE;
+
+    RETURN pubkeys;
+END;;
+
+CREATE OR REPLACE FUNCTION encodeU8U8TupleArray(tuples JSON)
+RETURNS varbinary(32)
+BEGIN
+    DECLARE i INT DEFAULT 0;
+    DECLARE arrayLength INT;
+    DECLARE tupleLength INT;
+    DECLARE tuple JSON;
+    DECLARE tuple0 TINYINT UNSIGNED;
+    DECLARE tuple1 TINYINT UNSIGNED;
+    DECLARE encoded VARBINARY(64) DEFAULT '';
+
+    SET arrayLength = JSON_LENGTH(tuples);
+    IF arrayLength > 16 THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'tuples length exceeds 16';
+    END IF;
+
+    WHILE i < arrayLength DO
+        SET tuple = JSON_EXTRACT(tuples, CONCAT('$[', i, ']'));
+        SET tupleLength = JSON_LENGTH(tuple);
+        IF tupleLength <> 2 THEN
+            SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'tuple length must be 2';
+        END IF;
+        SET tuple0 = JSON_EXTRACT(tuple, "$[0]");
+        SET tuple1 = JSON_EXTRACT(tuple, "$[1]");
+        SET encoded = CONCAT(encoded, CHAR(tuple0), CHAR(tuple1));
+        SET i = i + 1;
+    END WHILE;
+
+    RETURN encoded;
+END;;
+
+CREATE OR REPLACE FUNCTION decodeU8U8TupleArray(encoded varbinary(32))
+RETURNS JSON
+BEGIN
+    DECLARE i INT DEFAULT 0;
+    DECLARE arrayLength INT;
+    DECLARE tuple0 TINYINT UNSIGNED;
+    DECLARE tuple1 TINYINT UNSIGNED;
+    DECLARE tuples JSON DEFAULT '[]';
+
+    SET arrayLength = LENGTH(encoded) / 2;
+    WHILE i < arrayLength DO
+        SET tuple0 = ORD(SUBSTRING(encoded, i * 2 + 1, 1));
+        SET tuple1 = ORD(SUBSTRING(encoded, i * 2 + 2, 1));
+        SET tuples = JSON_ARRAY_APPEND(tuples, '$', JSON_ARRAY(CAST(tuple0 as unsigned int), CAST(tuple1 as unsigned int)));
+        SET i = i + 1;
+    END WHILE;
+
+    RETURN tuples;
+END;;
+
 
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;

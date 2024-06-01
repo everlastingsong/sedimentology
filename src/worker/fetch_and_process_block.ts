@@ -3,7 +3,7 @@ import { AxiosInstance } from "axios";
 import { Slot } from "../common/types";
 import { LRUCache } from "lru-cache";
 import invariant from "tiny-invariant";
-import { DecodedWhirlpoolInstruction, WhirlpoolTransactionDecoder } from "@yugure-orca/whirlpool-tx-decoder";
+import { DecodedWhirlpoolInstruction, RemainingAccounts, RemainingAccountsInfo, TransferAmountWithTransferFeeConfig, WhirlpoolTransactionDecoder } from "@yugure-orca/whirlpool-tx-decoder";
 
 const WHIRLPOOL_PUBKEY = "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc";
 
@@ -326,6 +326,30 @@ async function insertInstruction(txid: BigInt, order: number, ix: DecodedWhirlpo
     const key = Array(numKey).fill(", fromPubkeyBase58(?)").join("");
     const transfer = Array(numTransfer).fill(", ?").join("");
     return `INSERT INTO ${table} VALUES (?, ?${data}${key}${transfer})`;
+  };
+
+  const buildV2SQL = (ixName: string, numData: number, numKey: number, numTransfer: number): string => {
+    const table = `ixs${ixName.charAt(0).toUpperCase() + ixName.slice(1)}`;
+    const data = Array(numData).fill(", ?").join("");
+    const remainingAccountsInfo = ", encodeU8U8TupleArray(?)";
+    const key = Array(numKey).fill(", fromPubkeyBase58(?)").join("");
+    const remainingAccounts = ", encodeBase58PubkeyArray(?)";
+    const transfer = Array(numTransfer).fill(", ?, ?, ?").join(""); // amount, transfer fee bps, transfer fee max
+    return `INSERT INTO ${table} VALUES (?, ?${data}${remainingAccountsInfo}${key}${remainingAccounts}${transfer})`;
+  };
+
+  const jsonifyRemainingAccountsInfo = (remainingAccountsInfo: RemainingAccountsInfo): string => {
+    return JSON.stringify(
+      remainingAccountsInfo.map((slice) => [slice.accountsType, slice.length])
+    );
+  };
+
+  const jsonifyRemainingAccounts = (remainingAccounts: RemainingAccounts): string => {
+    return JSON.stringify(remainingAccounts);
+  };
+
+  const flattenV2Transfer = (transfer: TransferAmountWithTransferFeeConfig) => {
+    return [transfer.amount, transfer.transferFeeConfig.basisPoints, transfer.transferFeeConfig.maximumFee];
   }
 
   switch (ix.name) {
@@ -861,13 +885,226 @@ async function insertInstruction(txid: BigInt, order: number, ix: DecodedWhirlpo
         ix.accounts.newRewardEmissionsSuperAuthority,
         // no transfer
       ]);
-    case "collectFeesV2": throw new Error("not implemented");
-    case "collectProtocolFeesV2": throw new Error("not implemented");
-    case "collectRewardV2": throw new Error("not implemented");
-    case "increaseLiquidityV2": throw new Error("not implemented");
-    case "decreaseLiquidityV2": throw new Error("not implemented");
-    case "swapV2": throw new Error("not implemented");
-    case "twoHopSwapV2": throw new Error("not implemented");
+    case "collectFeesV2":
+      return database.query(buildV2SQL(ix.name, 0, 13, 2), [
+        txid,
+        order,
+        // no data
+        // remainingAccountsInfo
+        jsonifyRemainingAccountsInfo(ix.data.remainingAccountsInfo),
+        // key
+        ix.accounts.whirlpool,
+        ix.accounts.positionAuthority,
+        ix.accounts.position,
+        ix.accounts.positionTokenAccount,
+        ix.accounts.tokenMintA,
+        ix.accounts.tokenMintB,
+        ix.accounts.tokenOwnerAccountA,
+        ix.accounts.tokenVaultA,
+        ix.accounts.tokenOwnerAccountB,
+        ix.accounts.tokenVaultB,
+        ix.accounts.tokenProgramA,
+        ix.accounts.tokenProgramB,
+        ix.accounts.memoProgram,
+        // remainingAccounts
+        jsonifyRemainingAccounts(ix.remainingAccounts),
+        // transfer
+        ...flattenV2Transfer(ix.transfers[0]),
+        ...flattenV2Transfer(ix.transfers[1]),
+      ]);
+    case "collectProtocolFeesV2":
+      return database.query(buildV2SQL(ix.name, 0, 12, 2), [
+        txid,
+        order,
+        // no data
+        // remainingAccountsInfo
+        jsonifyRemainingAccountsInfo(ix.data.remainingAccountsInfo),
+        // key
+        ix.accounts.whirlpoolsConfig,
+        ix.accounts.whirlpool,
+        ix.accounts.collectProtocolFeesAuthority,
+        ix.accounts.tokenMintA,
+        ix.accounts.tokenMintB,
+        ix.accounts.tokenVaultA,
+        ix.accounts.tokenVaultB,
+        ix.accounts.tokenDestinationA,
+        ix.accounts.tokenDestinationB,
+        ix.accounts.tokenProgramA,
+        ix.accounts.tokenProgramB,
+        ix.accounts.memoProgram,
+        // remainingAccounts
+        jsonifyRemainingAccounts(ix.remainingAccounts),
+        // transfer
+        ...flattenV2Transfer(ix.transfers[0]),
+        ...flattenV2Transfer(ix.transfers[1]),
+      ]);
+    case "collectRewardV2":
+      return database.query(buildV2SQL(ix.name, 1, 9, 1), [
+        txid,
+        order,
+        // data
+        ix.data.rewardIndex,
+        // remainingAccountsInfo
+        jsonifyRemainingAccountsInfo(ix.data.remainingAccountsInfo),
+        // key
+        ix.accounts.whirlpool,
+        ix.accounts.positionAuthority,
+        ix.accounts.position,
+        ix.accounts.positionTokenAccount,
+        ix.accounts.rewardOwnerAccount,
+        ix.accounts.rewardMint,
+        ix.accounts.rewardVault,
+        ix.accounts.rewardTokenProgram,
+        ix.accounts.memoProgram,
+        // remainingAccounts
+        jsonifyRemainingAccounts(ix.remainingAccounts),
+        // transfer
+        ...flattenV2Transfer(ix.transfers[0]),
+      ]);
+    case "increaseLiquidityV2":
+      return database.query(buildV2SQL(ix.name, 3, 15, 2), [
+        txid,
+        order,
+        // data
+        BigInt(ix.data.liquidityAmount.toString()),
+        BigInt(ix.data.tokenMaxA.toString()),
+        BigInt(ix.data.tokenMaxB.toString()),
+        // remainingAccountsInfo
+        jsonifyRemainingAccountsInfo(ix.data.remainingAccountsInfo),
+        // key
+        ix.accounts.whirlpool,
+        ix.accounts.tokenProgramA,
+        ix.accounts.tokenProgramB,
+        ix.accounts.memoProgram,
+        ix.accounts.positionAuthority,
+        ix.accounts.position,
+        ix.accounts.positionTokenAccount,
+        ix.accounts.tokenMintA,
+        ix.accounts.tokenMintB,
+        ix.accounts.tokenOwnerAccountA,
+        ix.accounts.tokenOwnerAccountB,
+        ix.accounts.tokenVaultA,
+        ix.accounts.tokenVaultB,
+        ix.accounts.tickArrayLower,
+        ix.accounts.tickArrayUpper,
+        // remainingAccounts
+        jsonifyRemainingAccounts(ix.remainingAccounts),
+        // transfer
+        ...flattenV2Transfer(ix.transfers[0]),
+        ...flattenV2Transfer(ix.transfers[1]),
+      ]);
+    case "decreaseLiquidityV2":
+      return database.query(buildV2SQL(ix.name, 3, 15, 2), [
+        txid,
+        order,
+        // data
+        BigInt(ix.data.liquidityAmount.toString()),
+        BigInt(ix.data.tokenMinA.toString()),
+        BigInt(ix.data.tokenMinB.toString()),
+        // remainingAccountsInfo
+        jsonifyRemainingAccountsInfo(ix.data.remainingAccountsInfo),
+        // key
+        ix.accounts.whirlpool,
+        ix.accounts.tokenProgramA,
+        ix.accounts.tokenProgramB,
+        ix.accounts.memoProgram,
+        ix.accounts.positionAuthority,
+        ix.accounts.position,
+        ix.accounts.positionTokenAccount,
+        ix.accounts.tokenMintA,
+        ix.accounts.tokenMintB,
+        ix.accounts.tokenOwnerAccountA,
+        ix.accounts.tokenOwnerAccountB,
+        ix.accounts.tokenVaultA,
+        ix.accounts.tokenVaultB,
+        ix.accounts.tickArrayLower,
+        ix.accounts.tickArrayUpper,
+        // remainingAccounts
+        jsonifyRemainingAccounts(ix.remainingAccounts),
+        // transfer
+        ...flattenV2Transfer(ix.transfers[0]),
+        ...flattenV2Transfer(ix.transfers[1]),
+      ]);
+    case "swapV2":
+      return database.query(buildV2SQL(ix.name, 5, 15, 2), [
+        txid,
+        order,
+        // data
+        BigInt(ix.data.amount.toString()),
+        BigInt(ix.data.otherAmountThreshold.toString()),
+        BigInt(ix.data.sqrtPriceLimit.toString()),
+        ix.data.amountSpecifiedIsInput,
+        ix.data.aToB,
+        // remainingAccountsInfo
+        jsonifyRemainingAccountsInfo(ix.data.remainingAccountsInfo),
+        // key
+        ix.accounts.tokenProgramA,
+        ix.accounts.tokenProgramB,
+        ix.accounts.memoProgram,
+        ix.accounts.tokenAuthority,
+        ix.accounts.whirlpool,
+        ix.accounts.tokenMintA,
+        ix.accounts.tokenMintB,
+        ix.accounts.tokenOwnerAccountA,
+        ix.accounts.tokenVaultA,
+        ix.accounts.tokenOwnerAccountB,
+        ix.accounts.tokenVaultB,
+        ix.accounts.tickArray0,
+        ix.accounts.tickArray1,
+        ix.accounts.tickArray2,
+        ix.accounts.oracle,
+        // remainingAccounts
+        jsonifyRemainingAccounts(ix.remainingAccounts),
+        // transfer
+        ...flattenV2Transfer(ix.transfers[0]),
+        ...flattenV2Transfer(ix.transfers[1]),
+      ]);
+    case "twoHopSwapV2":
+      return database.query(buildV2SQL(ix.name, 7, 24, 3), [
+        txid,
+        order,
+        // data
+        BigInt(ix.data.amount.toString()),
+        BigInt(ix.data.otherAmountThreshold.toString()),
+        ix.data.amountSpecifiedIsInput,
+        ix.data.aToBOne,
+        ix.data.aToBTwo,
+        BigInt(ix.data.sqrtPriceLimitOne.toString()),
+        BigInt(ix.data.sqrtPriceLimitTwo.toString()),
+        // remainingAccountsInfo
+        jsonifyRemainingAccountsInfo(ix.data.remainingAccountsInfo),
+        // key
+        ix.accounts.whirlpoolOne,
+        ix.accounts.whirlpoolTwo,
+        ix.accounts.tokenMintInput,
+        ix.accounts.tokenMintIntermediate,
+        ix.accounts.tokenMintOutput,
+        ix.accounts.tokenProgramInput,
+        ix.accounts.tokenProgramIntermediate,
+        ix.accounts.tokenProgramOutput,
+        ix.accounts.tokenOwnerAccountInput,
+        ix.accounts.tokenVaultOneInput,
+        ix.accounts.tokenVaultOneIntermediate,
+        ix.accounts.tokenVaultTwoIntermediate,
+        ix.accounts.tokenVaultTwoOutput,
+        ix.accounts.tokenOwnerAccountOutput,
+        ix.accounts.tokenAuthority,
+        ix.accounts.tickArrayOne0,
+        ix.accounts.tickArrayOne1,
+        ix.accounts.tickArrayOne2,
+        ix.accounts.tickArrayTwo0,
+        ix.accounts.tickArrayTwo1,
+        ix.accounts.tickArrayTwo2,
+        ix.accounts.oracleOne,
+        ix.accounts.oracleTwo,
+        ix.accounts.memoProgram,
+        // remainingAccounts
+        jsonifyRemainingAccounts(ix.remainingAccounts),
+        // transfer
+        ...flattenV2Transfer(ix.transfers[0]),
+        ...flattenV2Transfer(ix.transfers[1]),
+        ...flattenV2Transfer(ix.transfers[2]),
+      ]);
     case "initializePoolV2":
       return database.query(buildSQL(ix.name, 2, 14, 0), [
         txid,
