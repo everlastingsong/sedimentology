@@ -534,6 +534,331 @@ CREATE TABLE `ixsUpdateFeesAndRewards` (
   PRIMARY KEY (`txid`,`order`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
+CREATE TABLE `ixsCollectFeesV2` (
+  `txid` bigint(11) unsigned NOT NULL,
+  `order` tinyint(11) unsigned NOT NULL,
+  `keyWhirlpool` int(11) unsigned NOT NULL,
+  `keyPositionAuthority` int(11) unsigned NOT NULL,
+  `keyPosition` int(11) unsigned NOT NULL,
+  `keyPositionTokenAccount` int(11) unsigned NOT NULL,
+  `keyTokenMintA` int(11) unsigned NOT NULL,
+  `keyTokenMintB` int(11) unsigned NOT NULL,
+  `keyTokenOwnerAccountA` int(11) unsigned NOT NULL,
+  `keyTokenVaultA` int(11) unsigned NOT NULL,
+  `keyTokenOwnerAccountB` int(11) unsigned NOT NULL,
+  `keyTokenVaultB` int(11) unsigned NOT NULL,
+  `keyTokenProgramA` int(11) unsigned NOT NULL,
+  `keyTokenProgramB` int(11) unsigned NOT NULL,
+  `keyMemoProgram` int(11) unsigned NOT NULL,
+  `remainingAccountsInfo` varbinary(32) NOT NULL,
+  `remainingAccountsKeys` varbinary(256) NOT NULL,
+  `transferAmount0` bigint(11) unsigned NOT NULL COMMENT 'u64',
+  `transferFeeConfigBps0` smallint(6) unsigned NOT NULL COMMENT 'u16',
+  `transferFeeConfigMax0` bigint(11) unsigned NOT NULL COMMENT 'u64',
+  `transferAmount1` bigint(11) unsigned NOT NULL COMMENT 'u64',
+  `transferFeeConfigBps1` smallint(6) unsigned NOT NULL COMMENT 'u16',
+  `transferFeeConfigMax1` bigint(11) unsigned NOT NULL COMMENT 'u64',
+  PRIMARY KEY (`txid`,`order`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+
+CREATE TABLE `ixsCollectProtocolFeesV2` (
+  `txid` bigint(11) unsigned NOT NULL,
+  `order` tinyint(11) unsigned NOT NULL,
+  `keyWhirlpoolsConfig` int(11) unsigned NOT NULL,
+  `keyWhirlpool` int(11) unsigned NOT NULL,
+  `keyCollectProtocolFeesAuthority` int(11) unsigned NOT NULL,
+  `keyTokenMintA` int(11) unsigned NOT NULL,
+  `keyTokenMintB` int(11) unsigned NOT NULL,
+  `keyTokenVaultA` int(11) unsigned NOT NULL,
+  `keyTokenVaultB` int(11) unsigned NOT NULL,
+  `keyTokenDestinationA` int(11) unsigned NOT NULL,
+  `keyTokenDestinationB` int(11) unsigned NOT NULL,
+  `keyTokenProgramA` int(11) unsigned NOT NULL,
+  `keyTokenProgramB` int(11) unsigned NOT NULL,
+  `keyMemoProgram` int(11) unsigned NOT NULL,
+  `remainingAccountsInfo` varbinary(32) NOT NULL,
+  `remainingAccountsKeys` varbinary(256) NOT NULL,
+  `transferAmount0` bigint(11) unsigned NOT NULL COMMENT 'u64',
+  `transferFeeConfigBps0` smallint(6) unsigned NOT NULL COMMENT 'u16',
+  `transferFeeConfigMax0` bigint(11) unsigned NOT NULL COMMENT 'u64',
+  `transferAmount1` bigint(11) unsigned NOT NULL COMMENT 'u64',
+  `transferFeeConfigBps1` smallint(6) unsigned NOT NULL COMMENT 'u16',
+  `transferFeeConfigMax1` bigint(11) unsigned NOT NULL COMMENT 'u64',
+  PRIMARY KEY (`txid`,`order`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+
+CREATE TABLE `ixsCollectRewardV2` (
+  `txid` bigint(11) unsigned NOT NULL,
+  `order` tinyint(11) unsigned NOT NULL,
+  `dataRewardIndex` tinyint(11) unsigned NOT NULL COMMENT 'u8',
+  `keyWhirlpool` int(11) unsigned NOT NULL,
+  `keyPositionAuthority` int(11) unsigned NOT NULL,
+  `keyPosition` int(11) unsigned NOT NULL,
+  `keyPositionTokenAccount` int(11) unsigned NOT NULL,
+  `keyRewardOwnerAccount` int(11) unsigned NOT NULL,
+  `keyRewardMint` int(11) unsigned NOT NULL,
+  `keyRewardVault` int(11) unsigned NOT NULL,
+  `keyRewardTokenProgram` int(11) unsigned NOT NULL,
+  `keyMemoProgram` int(11) unsigned NOT NULL,
+  `remainingAccountsInfo` varbinary(32) NOT NULL,
+  `remainingAccountsKeys` varbinary(256) NOT NULL,
+  `transferAmount0` bigint(11) unsigned NOT NULL COMMENT 'u64',
+  `transferFeeConfigBps0` smallint(6) unsigned NOT NULL COMMENT 'u16',
+  `transferFeeConfigMax0` bigint(11) unsigned NOT NULL COMMENT 'u64',
+  PRIMARY KEY (`txid`,`order`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+
+CREATE TABLE `ixsDecreaseLiquidityV2` (
+  `txid` bigint(11) unsigned NOT NULL,
+  `order` tinyint(11) unsigned NOT NULL,
+  `dataLiquidityAmount` decimal(39,0) unsigned NOT NULL COMMENT 'u128',
+  `dataTokenAmountMinA` bigint(11) unsigned NOT NULL COMMENT 'u64',
+  `dataTokenAmountMinB` bigint(11) unsigned NOT NULL COMMENT 'u64',
+  `keyWhirlpool` int(11) unsigned NOT NULL,
+  `keyTokenProgramA` int(11) unsigned NOT NULL,
+  `keyTokenProgramB` int(11) unsigned NOT NULL,
+  `keyMemoProgram` int(11) unsigned NOT NULL,
+  `keyPositionAuthority` int(11) unsigned NOT NULL,
+  `keyPosition` int(11) unsigned NOT NULL,
+  `keyPositionTokenAccount` int(11) unsigned NOT NULL,
+  `keyTokenMintA` int(11) unsigned NOT NULL,
+  `keyTokenMintB` int(11) unsigned NOT NULL,  
+  `keyTokenOwnerAccountA` int(11) unsigned NOT NULL,
+  `keyTokenOwnerAccountB` int(11) unsigned NOT NULL,
+  `keyTokenVaultA` int(11) unsigned NOT NULL,
+  `keyTokenVaultB` int(11) unsigned NOT NULL,
+  `keyTickArrayLower` int(11) unsigned NOT NULL,
+  `keyTickArrayUpper` int(11) unsigned NOT NULL,
+  `remainingAccountsInfo` varbinary(32) NOT NULL,
+  `remainingAccountsKeys` varbinary(256) NOT NULL,
+  `transferAmount0` bigint(11) unsigned NOT NULL COMMENT 'u64',
+  `transferFeeConfigBps0` smallint(6) unsigned NOT NULL COMMENT 'u16',
+  `transferFeeConfigMax0` bigint(11) unsigned NOT NULL COMMENT 'u64',
+  `transferAmount1` bigint(11) unsigned NOT NULL COMMENT 'u64',
+  `transferFeeConfigBps1` smallint(6) unsigned NOT NULL COMMENT 'u16',
+  `transferFeeConfigMax1` bigint(11) unsigned NOT NULL COMMENT 'u64',
+  PRIMARY KEY (`txid`,`order`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+
+CREATE TABLE `ixsIncreaseLiquidityV2` (
+  `txid` bigint(11) unsigned NOT NULL,
+  `order` tinyint(11) unsigned NOT NULL,
+  `dataLiquidityAmount` decimal(39,0) unsigned NOT NULL COMMENT 'u128',
+  `dataTokenAmountMaxA` bigint(11) unsigned NOT NULL COMMENT 'u64',
+  `dataTokenAmountMaxB` bigint(11) unsigned NOT NULL COMMENT 'u64',
+  `keyWhirlpool` int(11) unsigned NOT NULL,
+  `keyTokenProgramA` int(11) unsigned NOT NULL,
+  `keyTokenProgramB` int(11) unsigned NOT NULL,
+  `keyMemoProgram` int(11) unsigned NOT NULL,
+  `keyPositionAuthority` int(11) unsigned NOT NULL,
+  `keyPosition` int(11) unsigned NOT NULL,
+  `keyPositionTokenAccount` int(11) unsigned NOT NULL,
+  `keyTokenMintA` int(11) unsigned NOT NULL,
+  `keyTokenMintB` int(11) unsigned NOT NULL,  
+  `keyTokenOwnerAccountA` int(11) unsigned NOT NULL,
+  `keyTokenOwnerAccountB` int(11) unsigned NOT NULL,
+  `keyTokenVaultA` int(11) unsigned NOT NULL,
+  `keyTokenVaultB` int(11) unsigned NOT NULL,
+  `keyTickArrayLower` int(11) unsigned NOT NULL,
+  `keyTickArrayUpper` int(11) unsigned NOT NULL,
+  `remainingAccountsInfo` varbinary(32) NOT NULL,
+  `remainingAccountsKeys` varbinary(256) NOT NULL,
+  `transferAmount0` bigint(11) unsigned NOT NULL COMMENT 'u64',
+  `transferFeeConfigBps0` smallint(6) unsigned NOT NULL COMMENT 'u16',
+  `transferFeeConfigMax0` bigint(11) unsigned NOT NULL COMMENT 'u64',
+  `transferAmount1` bigint(11) unsigned NOT NULL COMMENT 'u64',
+  `transferFeeConfigBps1` smallint(6) unsigned NOT NULL COMMENT 'u16',
+  `transferFeeConfigMax1` bigint(11) unsigned NOT NULL COMMENT 'u64',
+  PRIMARY KEY (`txid`,`order`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+
+CREATE TABLE `ixsSwapV2` (
+  `txid` bigint(11) unsigned NOT NULL,
+  `order` tinyint(11) unsigned NOT NULL,
+  `dataAmount` bigint(11) unsigned NOT NULL COMMENT 'u64',
+  `dataOtherAmountThreshold` bigint(11) unsigned NOT NULL COMMENT 'u64',
+  `dataSqrtPriceLimit` decimal(39,0) unsigned NOT NULL COMMENT 'u128',
+  `dataAmountSpecifiedIsInput` tinyint(1) unsigned NOT NULL COMMENT 'boolean',
+  `dataAToB` tinyint(1) unsigned NOT NULL COMMENT 'boolean',
+  `keyTokenProgramA` int(11) unsigned NOT NULL,
+  `keyTokenProgramB` int(11) unsigned NOT NULL,
+  `keyMemoProgram` int(11) unsigned NOT NULL,
+  `keyTokenAuthority` int(11) unsigned NOT NULL,
+  `keyWhirlpool` int(11) unsigned NOT NULL,
+  `keyTokenMintA` int(11) unsigned NOT NULL,
+  `keyTokenMintB` int(11) unsigned NOT NULL,
+  `keyTokenOwnerAccountA` int(11) unsigned NOT NULL,
+  `keyVaultA` int(11) unsigned NOT NULL,
+  `keyTokenOwnerAccountB` int(11) unsigned NOT NULL,
+  `keyVaultB` int(11) unsigned NOT NULL,
+  `keyTickArray0` int(11) unsigned NOT NULL,
+  `keyTickArray1` int(11) unsigned NOT NULL,
+  `keyTickArray2` int(11) unsigned NOT NULL,
+  `keyOracle` int(11) unsigned NOT NULL,
+  `remainingAccountsInfo` varbinary(32) NOT NULL,
+  `remainingAccountsKeys` varbinary(256) NOT NULL,
+  `transferAmount0` bigint(11) unsigned NOT NULL COMMENT 'u64',
+  `transferFeeConfigBps0` smallint(6) unsigned NOT NULL COMMENT 'u16',
+  `transferFeeConfigMax0` bigint(11) unsigned NOT NULL COMMENT 'u64',
+  `transferAmount1` bigint(11) unsigned NOT NULL COMMENT 'u64',
+  `transferFeeConfigBps1` smallint(6) unsigned NOT NULL COMMENT 'u16',
+  `transferFeeConfigMax1` bigint(11) unsigned NOT NULL COMMENT 'u64',
+  PRIMARY KEY (`txid`,`order`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+
+CREATE TABLE `ixsTwoHopSwapV2` (
+  `txid` bigint(11) unsigned NOT NULL,
+  `order` tinyint(11) unsigned NOT NULL,
+  `dataAmount` bigint(11) unsigned NOT NULL COMMENT 'u64',
+  `dataOtherAmountThreshold` bigint(11) unsigned NOT NULL COMMENT 'u64',
+  `dataAmountSpecifiedIsInput` tinyint(1) unsigned NOT NULL COMMENT 'boolean',
+  `dataAToBOne` tinyint(1) unsigned NOT NULL COMMENT 'boolean',
+  `dataAToBTwo` tinyint(1) unsigned NOT NULL COMMENT 'boolean',
+  `dataSqrtPriceLimitOne` decimal(39,0) unsigned NOT NULL COMMENT 'u128',
+  `dataSqrtPriceLimitTwo` decimal(39,0) unsigned NOT NULL COMMENT 'u128',
+  `keyWhirlpoolOne` int(11) unsigned NOT NULL,
+  `keyWhirlpoolTwo` int(11) unsigned NOT NULL,
+  `keyTokenMintInput` int(11) unsigned NOT NULL,
+  `keyTokenMintIntermediate` int(11) unsigned NOT NULL,
+  `keyTokenMintOutput` int(11) unsigned NOT NULL,
+  `keyTokenProgramInput` int(11) unsigned NOT NULL,
+  `keyTokenProgramIntermediate` int(11) unsigned NOT NULL,
+  `keyTokenProgramOutput` int(11) unsigned NOT NULL,
+  `keyTokenOwnerAccountInput` int(11) unsigned NOT NULL,
+  `keyVaultOneInput` int(11) unsigned NOT NULL,
+  `keyVaultOneIntermediate` int(11) unsigned NOT NULL,
+  `keyVaultTwoIntermediate` int(11) unsigned NOT NULL,
+  `keyVaultTwoOutput` int(11) unsigned NOT NULL,
+  `keyTokenOwnerAccountOutput` int(11) unsigned NOT NULL,
+  `keyTokenAuthority` int(11) unsigned NOT NULL,
+  `keyTickArrayOne0` int(11) unsigned NOT NULL,
+  `keyTickArrayOne1` int(11) unsigned NOT NULL,
+  `keyTickArrayOne2` int(11) unsigned NOT NULL,
+  `keyTickArrayTwo0` int(11) unsigned NOT NULL,
+  `keyTickArrayTwo1` int(11) unsigned NOT NULL,
+  `keyTickArrayTwo2` int(11) unsigned NOT NULL,
+  `keyOracleOne` int(11) unsigned NOT NULL,
+  `keyOracleTwo` int(11) unsigned NOT NULL,
+  `keyMemoProgram` int(11) unsigned NOT NULL,
+  `remainingAccountsInfo` varbinary(32) NOT NULL,
+  `remainingAccountsKeys` varbinary(256) NOT NULL,
+  `transferAmount0` bigint(11) unsigned NOT NULL COMMENT 'u64',
+  `transferFeeConfigBps0` smallint(6) unsigned NOT NULL COMMENT 'u16',
+  `transferFeeConfigMax0` bigint(11) unsigned NOT NULL COMMENT 'u64',
+  `transferAmount1` bigint(11) unsigned NOT NULL COMMENT 'u64',
+  `transferFeeConfigBps1` smallint(6) unsigned NOT NULL COMMENT 'u16',
+  `transferFeeConfigMax1` bigint(11) unsigned NOT NULL COMMENT 'u64',
+  `transferAmount2` bigint(11) unsigned NOT NULL COMMENT 'u64',
+  `transferFeeConfigBps2` smallint(6) unsigned NOT NULL COMMENT 'u16',
+  `transferFeeConfigMax2` bigint(11) unsigned NOT NULL COMMENT 'u64',
+  PRIMARY KEY (`txid`,`order`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+
+CREATE TABLE `ixsInitializePoolV2` (
+  `txid` bigint(11) unsigned NOT NULL,
+  `order` tinyint(11) unsigned NOT NULL,
+  `dataTickSpacing` smallint(11) unsigned NOT NULL COMMENT 'u16',
+  `dataInitialSqrtPrice` decimal(39,0) unsigned NOT NULL COMMENT 'u128',
+  `keyWhirlpoolsConfig` int(11) unsigned NOT NULL,
+  `keyTokenMintA` int(11) unsigned NOT NULL,
+  `keyTokenMintB` int(11) unsigned NOT NULL,
+  `keyTokenBadgeA` int(11) unsigned NOT NULL,
+  `keyTokenBadgeB` int(11) unsigned NOT NULL,
+  `keyFunder` int(11) unsigned NOT NULL,
+  `keyWhirlpool` int(11) unsigned NOT NULL,
+  `keyTokenVaultA` int(11) unsigned NOT NULL,
+  `keyTokenVaultB` int(11) unsigned NOT NULL,
+  `keyFeeTier` int(11) unsigned NOT NULL,
+  `keyTokenProgramA` int(11) unsigned NOT NULL,
+  `keyTokenProgramB` int(11) unsigned NOT NULL,
+  `keySystemProgram` int(11) unsigned NOT NULL,
+  `keyRent` int(11) unsigned NOT NULL,
+  PRIMARY KEY (`txid`,`order`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+
+CREATE TABLE `ixsInitializeRewardV2` (
+  `txid` bigint(11) unsigned NOT NULL,
+  `order` tinyint(11) unsigned NOT NULL,
+  `dataRewardIndex` tinyint(11) unsigned NOT NULL COMMENT 'u8',
+  `keyRewardAuthority` int(11) unsigned NOT NULL,
+  `keyFunder` int(11) unsigned NOT NULL,
+  `keyWhirlpool` int(11) unsigned NOT NULL,
+  `keyRewardMint` int(11) unsigned NOT NULL,
+  `keyRewardTokenBadge` int(11) unsigned NOT NULL,
+  `keyRewardVault` int(11) unsigned NOT NULL,
+  `keyRewardTokenProgram` int(11) unsigned NOT NULL,
+  `keySystemProgram` int(11) unsigned NOT NULL,
+  `keyRent` int(11) unsigned NOT NULL,
+  PRIMARY KEY (`txid`,`order`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+
+CREATE TABLE `ixsSetRewardEmissionsV2` (
+  `txid` bigint(11) unsigned NOT NULL,
+  `order` tinyint(11) unsigned NOT NULL,
+  `dataRewardIndex` tinyint(11) unsigned NOT NULL COMMENT 'u8',
+  `dataEmissionsPerSecondX64` decimal(39,0) unsigned NOT NULL COMMENT 'u128',
+  `keyWhirlpool` int(11) unsigned NOT NULL,
+  `keyRewardAuthority` int(11) unsigned NOT NULL,
+  `keyRewardVault` int(11) unsigned NOT NULL,
+  PRIMARY KEY (`txid`,`order`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+
+CREATE TABLE `ixsInitializeConfigExtension` (
+  `txid` bigint(11) unsigned NOT NULL,
+  `order` tinyint(11) unsigned NOT NULL,
+  `keyWhirlpoolsConfig` int(11) unsigned NOT NULL,
+  `keyWhirlpoolsConfigExtension` int(11) unsigned NOT NULL,
+  `keyFunder` int(11) unsigned NOT NULL,
+  `keyFeeAuthority` int(11) unsigned NOT NULL,
+  `keySystemProgram` int(11) unsigned NOT NULL,
+  PRIMARY KEY (`txid`,`order`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+
+CREATE TABLE `ixsInitializeTokenBadge` (
+  `txid` bigint(11) unsigned NOT NULL,
+  `order` tinyint(11) unsigned NOT NULL,
+  `keyWhirlpoolsConfig` int(11) unsigned NOT NULL,
+  `keyWhirlpoolsConfigExtension` int(11) unsigned NOT NULL,
+  `keyTokenBadgeAuthority` int(11) unsigned NOT NULL,
+  `keyTokenMint` int(11) unsigned NOT NULL,
+  `keyTokenBadge` int(11) unsigned NOT NULL,
+  `keyFunder` int(11) unsigned NOT NULL,
+  `keySystemProgram` int(11) unsigned NOT NULL,
+  PRIMARY KEY (`txid`,`order`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+
+CREATE TABLE `ixsDeleteTokenBadge` (
+  `txid` bigint(11) unsigned NOT NULL,
+  `order` tinyint(11) unsigned NOT NULL,
+  `keyWhirlpoolsConfig` int(11) unsigned NOT NULL,
+  `keyWhirlpoolsConfigExtension` int(11) unsigned NOT NULL,
+  `keyTokenBadgeAuthority` int(11) unsigned NOT NULL,
+  `keyTokenMint` int(11) unsigned NOT NULL,
+  `keyTokenBadge` int(11) unsigned NOT NULL,
+  `keyReceiver` int(11) unsigned NOT NULL,
+  PRIMARY KEY (`txid`,`order`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+
+CREATE TABLE `ixsSetConfigExtensionAuthority` (
+  `txid` bigint(11) unsigned NOT NULL,
+  `order` tinyint(11) unsigned NOT NULL,
+  `keyWhirlpoolsConfig` int(11) unsigned NOT NULL,
+  `keyWhirlpoolsConfigExtension` int(11) unsigned NOT NULL,
+  `keyConfigExtensionAuthority` int(11) unsigned NOT NULL,
+  `keyNewConfigExtensionAuthority` int(11) unsigned NOT NULL,
+  PRIMARY KEY (`txid`,`order`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+
+CREATE TABLE `ixsSetTokenBadgeAuthority` (
+  `txid` bigint(11) unsigned NOT NULL,
+  `order` tinyint(11) unsigned NOT NULL,
+  `keyWhirlpoolsConfig` int(11) unsigned NOT NULL,
+  `keyWhirlpoolsConfigExtension` int(11) unsigned NOT NULL,
+  `keyConfigExtensionAuthority` int(11) unsigned NOT NULL,
+  `keyNewTokenBadgeAuthority` int(11) unsigned NOT NULL,
+  PRIMARY KEY (`txid`,`order`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+
 
 --
 -- PROCEDURE

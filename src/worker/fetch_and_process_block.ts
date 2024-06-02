@@ -331,11 +331,10 @@ async function insertInstruction(txid: BigInt, order: number, ix: DecodedWhirlpo
   const buildV2SQL = (ixName: string, numData: number, numKey: number, numTransfer: number): string => {
     const table = `ixs${ixName.charAt(0).toUpperCase() + ixName.slice(1)}`;
     const data = Array(numData).fill(", ?").join("");
-    const remainingAccountsInfo = ", encodeU8U8TupleArray(?)";
     const key = Array(numKey).fill(", fromPubkeyBase58(?)").join("");
-    const remainingAccounts = ", encodeBase58PubkeyArray(?)";
+    const remainingAccounts = ", encodeU8U8TupleArray(?), encodeBase58PubkeyArray(?)";
     const transfer = Array(numTransfer).fill(", ?, ?, ?").join(""); // amount, transfer fee bps, transfer fee max
-    return `INSERT INTO ${table} VALUES (?, ?${data}${remainingAccountsInfo}${key}${remainingAccounts}${transfer})`;
+    return `INSERT INTO ${table} VALUES (?, ?${data}${key}${remainingAccounts}${transfer})`;
   };
 
   const jsonifyRemainingAccountsInfo = (remainingAccountsInfo: RemainingAccountsInfo): string => {
@@ -890,8 +889,6 @@ async function insertInstruction(txid: BigInt, order: number, ix: DecodedWhirlpo
         txid,
         order,
         // no data
-        // remainingAccountsInfo
-        jsonifyRemainingAccountsInfo(ix.data.remainingAccountsInfo),
         // key
         ix.accounts.whirlpool,
         ix.accounts.positionAuthority,
@@ -907,6 +904,7 @@ async function insertInstruction(txid: BigInt, order: number, ix: DecodedWhirlpo
         ix.accounts.tokenProgramB,
         ix.accounts.memoProgram,
         // remainingAccounts
+        jsonifyRemainingAccountsInfo(ix.data.remainingAccountsInfo),
         jsonifyRemainingAccounts(ix.remainingAccounts),
         // transfer
         ...flattenV2Transfer(ix.transfers[0]),
@@ -917,8 +915,6 @@ async function insertInstruction(txid: BigInt, order: number, ix: DecodedWhirlpo
         txid,
         order,
         // no data
-        // remainingAccountsInfo
-        jsonifyRemainingAccountsInfo(ix.data.remainingAccountsInfo),
         // key
         ix.accounts.whirlpoolsConfig,
         ix.accounts.whirlpool,
@@ -933,6 +929,7 @@ async function insertInstruction(txid: BigInt, order: number, ix: DecodedWhirlpo
         ix.accounts.tokenProgramB,
         ix.accounts.memoProgram,
         // remainingAccounts
+        jsonifyRemainingAccountsInfo(ix.data.remainingAccountsInfo),
         jsonifyRemainingAccounts(ix.remainingAccounts),
         // transfer
         ...flattenV2Transfer(ix.transfers[0]),
@@ -944,8 +941,6 @@ async function insertInstruction(txid: BigInt, order: number, ix: DecodedWhirlpo
         order,
         // data
         ix.data.rewardIndex,
-        // remainingAccountsInfo
-        jsonifyRemainingAccountsInfo(ix.data.remainingAccountsInfo),
         // key
         ix.accounts.whirlpool,
         ix.accounts.positionAuthority,
@@ -957,6 +952,7 @@ async function insertInstruction(txid: BigInt, order: number, ix: DecodedWhirlpo
         ix.accounts.rewardTokenProgram,
         ix.accounts.memoProgram,
         // remainingAccounts
+        jsonifyRemainingAccountsInfo(ix.data.remainingAccountsInfo),
         jsonifyRemainingAccounts(ix.remainingAccounts),
         // transfer
         ...flattenV2Transfer(ix.transfers[0]),
@@ -969,8 +965,6 @@ async function insertInstruction(txid: BigInt, order: number, ix: DecodedWhirlpo
         BigInt(ix.data.liquidityAmount.toString()),
         BigInt(ix.data.tokenMaxA.toString()),
         BigInt(ix.data.tokenMaxB.toString()),
-        // remainingAccountsInfo
-        jsonifyRemainingAccountsInfo(ix.data.remainingAccountsInfo),
         // key
         ix.accounts.whirlpool,
         ix.accounts.tokenProgramA,
@@ -988,6 +982,7 @@ async function insertInstruction(txid: BigInt, order: number, ix: DecodedWhirlpo
         ix.accounts.tickArrayLower,
         ix.accounts.tickArrayUpper,
         // remainingAccounts
+        jsonifyRemainingAccountsInfo(ix.data.remainingAccountsInfo),
         jsonifyRemainingAccounts(ix.remainingAccounts),
         // transfer
         ...flattenV2Transfer(ix.transfers[0]),
@@ -1001,8 +996,6 @@ async function insertInstruction(txid: BigInt, order: number, ix: DecodedWhirlpo
         BigInt(ix.data.liquidityAmount.toString()),
         BigInt(ix.data.tokenMinA.toString()),
         BigInt(ix.data.tokenMinB.toString()),
-        // remainingAccountsInfo
-        jsonifyRemainingAccountsInfo(ix.data.remainingAccountsInfo),
         // key
         ix.accounts.whirlpool,
         ix.accounts.tokenProgramA,
@@ -1020,6 +1013,7 @@ async function insertInstruction(txid: BigInt, order: number, ix: DecodedWhirlpo
         ix.accounts.tickArrayLower,
         ix.accounts.tickArrayUpper,
         // remainingAccounts
+        jsonifyRemainingAccountsInfo(ix.data.remainingAccountsInfo),
         jsonifyRemainingAccounts(ix.remainingAccounts),
         // transfer
         ...flattenV2Transfer(ix.transfers[0]),
@@ -1035,8 +1029,6 @@ async function insertInstruction(txid: BigInt, order: number, ix: DecodedWhirlpo
         BigInt(ix.data.sqrtPriceLimit.toString()),
         ix.data.amountSpecifiedIsInput,
         ix.data.aToB,
-        // remainingAccountsInfo
-        jsonifyRemainingAccountsInfo(ix.data.remainingAccountsInfo),
         // key
         ix.accounts.tokenProgramA,
         ix.accounts.tokenProgramB,
@@ -1054,6 +1046,7 @@ async function insertInstruction(txid: BigInt, order: number, ix: DecodedWhirlpo
         ix.accounts.tickArray2,
         ix.accounts.oracle,
         // remainingAccounts
+        jsonifyRemainingAccountsInfo(ix.data.remainingAccountsInfo),
         jsonifyRemainingAccounts(ix.remainingAccounts),
         // transfer
         ...flattenV2Transfer(ix.transfers[0]),
@@ -1071,8 +1064,6 @@ async function insertInstruction(txid: BigInt, order: number, ix: DecodedWhirlpo
         ix.data.aToBTwo,
         BigInt(ix.data.sqrtPriceLimitOne.toString()),
         BigInt(ix.data.sqrtPriceLimitTwo.toString()),
-        // remainingAccountsInfo
-        jsonifyRemainingAccountsInfo(ix.data.remainingAccountsInfo),
         // key
         ix.accounts.whirlpoolOne,
         ix.accounts.whirlpoolTwo,
@@ -1099,6 +1090,7 @@ async function insertInstruction(txid: BigInt, order: number, ix: DecodedWhirlpo
         ix.accounts.oracleTwo,
         ix.accounts.memoProgram,
         // remainingAccounts
+        jsonifyRemainingAccountsInfo(ix.data.remainingAccountsInfo),
         jsonifyRemainingAccounts(ix.remainingAccounts),
         // transfer
         ...flattenV2Transfer(ix.transfers[0]),
