@@ -245,7 +245,23 @@ pub fn export_transaction(yyyymmdd_date: u32, file: &String, database: &mut Pool
           UNION ALL SELECT * FROM vwJsonIxsSetRewardEmissionsSuperAuthority WHERE txid BETWEEN :s and :e
           UNION ALL SELECT * FROM vwJsonIxsSwap WHERE txid BETWEEN :s and :e
           UNION ALL SELECT * FROM vwJsonIxsTwoHopSwap WHERE txid BETWEEN :s and :e
-          UNION ALL SELECT * FROM vwJsonIxsUpdateFeesAndRewards WHERE txid BETWEEN :s and :e",
+          UNION ALL SELECT * FROM vwJsonIxsUpdateFeesAndRewards WHERE txid BETWEEN :s and :e
+          UNION ALL SELECT * FROM vwJsonIxsCollectFeesV2 WHERE txid BETWEEN :s and :e
+          UNION ALL SELECT * FROM vwJsonIxsCollectProtocolFeesV2 WHERE txid BETWEEN :s and :e
+          UNION ALL SELECT * FROM vwJsonIxsCollectRewardV2 WHERE txid BETWEEN :s and :e
+          UNION ALL SELECT * FROM vwJsonIxsDecreaseLiquidityV2 WHERE txid BETWEEN :s and :e
+          UNION ALL SELECT * FROM vwJsonIxsIncreaseLiquidityV2 WHERE txid BETWEEN :s and :e
+          UNION ALL SELECT * FROM vwJsonIxsSwapV2 WHERE txid BETWEEN :s and :e
+          UNION ALL SELECT * FROM vwJsonIxsTwoHopSwapV2 WHERE txid BETWEEN :s and :e
+          UNION ALL SELECT * FROM vwJsonIxsInitializePoolV2 WHERE txid BETWEEN :s and :e
+          UNION ALL SELECT * FROM vwJsonIxsInitializeRewardV2 WHERE txid BETWEEN :s and :e
+          UNION ALL SELECT * FROM vwJsonIxsSetRewardEmissionsV2 WHERE txid BETWEEN :s and :e
+          UNION ALL SELECT * FROM vwJsonIxsInitializeConfigExtension WHERE txid BETWEEN :s and :e
+          UNION ALL SELECT * FROM vwJsonIxsInitializeTokenBadge WHERE txid BETWEEN :s and :e
+          UNION ALL SELECT * FROM vwJsonIxsDeleteTokenBadge WHERE txid BETWEEN :s and :e
+          UNION ALL SELECT * FROM vwJsonIxsSetConfigExtensionAuthority WHERE txid BETWEEN :s and :e
+          UNION ALL SELECT * FROM vwJsonIxsSetTokenBadgeAuthority WHERE txid BETWEEN :s and :e
+          ",
           // no ORDER BY clause, sort at the client side
       params! {
           "s" => chunk_min_txid,
