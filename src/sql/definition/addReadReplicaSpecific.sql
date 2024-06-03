@@ -134,6 +134,68 @@ CREATE INDEX keyWhirlpoolTwo ON ixsTwoHopSwap (keyWhirlpoolTwo);
 CREATE INDEX keyWhirlpool ON ixsUpdateFeesAndRewards (keyWhirlpool);
 CREATE INDEX keyPosition ON ixsUpdateFeesAndRewards (keyPosition);
 
+-- ixsCollectFeesV2
+CREATE INDEX keyWhirlpool ON ixsCollectFeesV2 (keyWhirlpool);
+CREATE INDEX keyPositionAuthority ON ixsCollectFeesV2 (keyPositionAuthority);
+CREATE INDEX keyPosition ON ixsCollectFeesV2 (keyPosition);
+
+-- ixsCollectProtocolFeesV2
+CREATE INDEX keyWhirlpool ON ixsCollectProtocolFeesV2 (keyWhirlpool);
+CREATE INDEX keyCollectProtocolFeesAuthority ON ixsCollectProtocolFeesV2 (keyCollectProtocolFeesAuthority);
+
+-- ixsCollectRewardV2
+CREATE INDEX keyWhirlpool ON ixsCollectRewardV2 (keyWhirlpool);
+CREATE INDEX keyPositionAuthority ON ixsCollectRewardV2 (keyPositionAuthority);
+CREATE INDEX keyPosition ON ixsCollectRewardV2 (keyPosition);
+
+-- ixsDecreaseLiquidityV2
+CREATE INDEX keyWhirlpool ON ixsDecreaseLiquidityV2 (keyWhirlpool);
+CREATE INDEX keyPositionAuthority ON ixsDecreaseLiquidityV2 (keyPositionAuthority);
+CREATE INDEX keyPosition ON ixsDecreaseLiquidityV2 (keyPosition);
+CREATE INDEX keyTickArrayLower ON ixsDecreaseLiquidityV2 (keyTickArrayLower);
+CREATE INDEX keyTickArrayUpper ON ixsDecreaseLiquidityV2 (keyTickArrayUpper);
+
+-- ixsIncreaseLiquidityV2
+CREATE INDEX keyWhirlpool ON ixsIncreaseLiquidityV2 (keyWhirlpool);
+CREATE INDEX keyPositionAuthority ON ixsIncreaseLiquidityV2 (keyPositionAuthority);
+CREATE INDEX keyPosition ON ixsIncreaseLiquidityV2 (keyPosition);
+CREATE INDEX keyTickArrayLower ON ixsIncreaseLiquidityV2 (keyTickArrayLower);
+CREATE INDEX keyTickArrayUpper ON ixsIncreaseLiquidityV2 (keyTickArrayUpper);
+
+-- ixsSwapV2
+CREATE INDEX keyTokenAuthority ON ixsSwapV2 (keyTokenAuthority);
+CREATE INDEX keyWhirlpool ON ixsSwapV2 (keyWhirlpool);
+
+-- ixsTwoHopSwapV2
+CREATE INDEX keyTokenAuthority ON ixsTwoHopSwapV2 (keyTokenAuthority);
+CREATE INDEX keyWhirlpoolOne ON ixsTwoHopSwapV2 (keyWhirlpoolOne);
+CREATE INDEX keyWhirlpoolTwo ON ixsTwoHopSwapV2 (keyWhirlpoolTwo);
+
+-- ixsInitializePoolV2
+CREATE INDEX keyWhirlpoolsConfig ON ixsInitializePoolV2 (keyWhirlpoolsConfig);
+CREATE INDEX keyTokenMintA ON ixsInitializePoolV2 (keyTokenMintA);
+CREATE INDEX keyTokenMintB ON ixsInitializePoolV2 (keyTokenMintB);
+CREATE INDEX keyWhirlpool ON ixsInitializePoolV2 (keyWhirlpool);
+CREATE INDEX keyFeeTier ON ixsInitializePoolV2 (keyFeeTier);
+
+-- ixsInitializeRewardV2
+CREATE INDEX keyWhirlpool ON ixsInitializeRewardV2 (keyWhirlpool);
+CREATE INDEX keyRewardMint ON ixsInitializeRewardV2 (keyRewardMint);
+
+-- ixsSetRewardEmissionsV2
+CREATE INDEX keyWhirlpool ON ixsSetRewardEmissionsV2 (keyWhirlpool);
+
+-- ixsInitializeConfigExtension
+
+-- ixsInitializeTokenBadge
+CREATE INDEX keyTokenMint ON ixsInitializeTokenBadge (keyTokenMint);
+
+-- ixsDeleteTokenBadge
+CREATE INDEX keyTokenMint ON ixsDeleteTokenBadge (keyTokenMint);
+
+-- ixsSetConfigExtensionAuthority
+-- ixsSetTokenBadgeAuthority
+
 --
 -- FUNCTION
 --

@@ -3,7 +3,7 @@ import { AxiosInstance } from "axios";
 import { Slot } from "../common/types";
 import { LRUCache } from "lru-cache";
 import invariant from "tiny-invariant";
-import { DecodedWhirlpoolInstruction, WhirlpoolTransactionDecoder } from "@yugure-orca/whirlpool-tx-decoder";
+import { DecodedWhirlpoolInstruction, RemainingAccounts, RemainingAccountsInfo, TransferAmountWithTransferFeeConfig, WhirlpoolTransactionDecoder } from "@yugure-orca/whirlpool-tx-decoder";
 
 const WHIRLPOOL_PUBKEY = "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc";
 
@@ -86,7 +86,7 @@ export async function fetchAndProcessBlock(database: Connection, solana: AxiosIn
   // process transactions
 
   const touchedPubkeys = new Set<string>();
-  const processedTransactions = [];
+  const processedTransactions: ProcessedTransaction[] = [];
   blockData.transactions.forEach((tx, orderInBlock) => {
     // drop failed transactions
     if (tx.meta.err !== null) return;
@@ -113,8 +113,8 @@ export async function fetchAndProcessBlock(database: Connection, solana: AxiosIn
 
     // FOR txs table
     const txid = toTxID(slot, orderInBlock);
-    const signature = tx.transaction.signatures[0];
-    const payer = tx.transaction.message.accountKeys[0];
+    const signature: string = tx.transaction.signatures[0];
+    const payer: string = tx.transaction.message.accountKeys[0];
 
     // FOR pubkeys table
     touchedPubkeys.add(payer);
@@ -124,10 +124,20 @@ export async function fetchAndProcessBlock(database: Connection, solana: AxiosIn
           touchedPubkeys.add(ix.data.feeAuthority);
           touchedPubkeys.add(ix.data.collectProtocolFeesAuthority);
           touchedPubkeys.add(ix.data.rewardEmissionsSuperAuthority);
-          // no break
+          break;
+        case "collectFeesV2":
+        case "collectProtocolFeesV2":
+        case "collectRewardV2":
+        case "increaseLiquidityV2":
+        case "decreaseLiquidityV2":
+        case "swapV2":
+        case "twoHopSwapV2":
+          ix.remainingAccounts.forEach((pubkey) => touchedPubkeys.add(pubkey));
+          break;
         default:
-          Object.values(ix.accounts).forEach((pubkey) => touchedPubkeys.add(pubkey));
+          break;
       }
+      Object.values(ix.accounts).forEach((pubkey) => touchedPubkeys.add(pubkey));
     });
 
     // FOR balances table
@@ -136,31 +146,40 @@ export async function fetchAndProcessBlock(database: Connection, solana: AxiosIn
     whirlpoolInstructions.forEach((ix) => {
       switch (ix.name) {
         case "initializePool":
+        case "initializePoolV2":
           // This instruction does not affect the token balance and preTokenBalance cannot be obtained.
           initializingVaultPubkeys.add(ix.accounts.tokenVaultA);
           initializingVaultPubkeys.add(ix.accounts.tokenVaultB);
           break;
         case "increaseLiquidity":
         case "decreaseLiquidity":
+        case "increaseLiquidityV2":
+        case "decreaseLiquidityV2":
           touchedVaultPubkeys.add(ix.accounts.tokenVaultA);
           touchedVaultPubkeys.add(ix.accounts.tokenVaultB);
           break;
         case "collectFees":
         case "collectProtocolFees":
+        case "collectFeesV2":
+        case "collectProtocolFeesV2":
           touchedVaultPubkeys.add(ix.accounts.tokenVaultA);
           touchedVaultPubkeys.add(ix.accounts.tokenVaultB);
           break;
         case "initializeReward":
+        case "initializeRewardV2":
           // This instruction does not affect the token balance and preTokenBalance cannot be obtained.
           initializingVaultPubkeys.add(ix.accounts.rewardVault);
           break;
         case "setRewardEmissions":
+        case "setRewardEmissionsV2":
           // This instruction does not affect the token balance and preTokenBalance cannot be obtained.
           break;
         case "collectReward":
+        case "collectRewardV2":
           touchedVaultPubkeys.add(ix.accounts.rewardVault);
           break;
         case "swap":
+        case "swapV2":
           touchedVaultPubkeys.add(ix.accounts.tokenVaultA);
           touchedVaultPubkeys.add(ix.accounts.tokenVaultB);
           break;
@@ -169,6 +188,12 @@ export async function fetchAndProcessBlock(database: Connection, solana: AxiosIn
           touchedVaultPubkeys.add(ix.accounts.tokenVaultOneB);
           touchedVaultPubkeys.add(ix.accounts.tokenVaultTwoA);
           touchedVaultPubkeys.add(ix.accounts.tokenVaultTwoB);
+          break;
+        case "twoHopSwapV2":
+          touchedVaultPubkeys.add(ix.accounts.tokenVaultOneInput);
+          touchedVaultPubkeys.add(ix.accounts.tokenVaultOneIntermediate);
+          touchedVaultPubkeys.add(ix.accounts.tokenVaultTwoIntermediate);
+          touchedVaultPubkeys.add(ix.accounts.tokenVaultTwoOutput);
           break;
         case "adminIncreaseLiquidity":
         case "closeBundledPosition":
@@ -192,6 +217,11 @@ export async function fetchAndProcessBlock(database: Connection, solana: AxiosIn
         case "setRewardAuthorityBySuperAuthority":
         case "setRewardEmissionsSuperAuthority":
         case "updateFeesAndRewards":
+        case "initializeConfigExtension":
+        case "initializeTokenBadge":
+        case "deleteTokenBadge":
+        case "setConfigExtensionAuthority":
+        case "setTokenBadgeAuthority":
           // This instruction does not affect the token balance.
           break;
         default:
@@ -204,10 +234,10 @@ export async function fetchAndProcessBlock(database: Connection, solana: AxiosIn
       invariant(index !== -1, "index must exist");
       // edge case: 4rMJC56qibPjr1PDzX7bQFmBuG6yd9CcVysoFbo8dk1Sho2eehQt6Y8NhZFEFECNvnbcNN3evFE2X47ycLxyQmA
       // initializePool + increaseLiquidity in the same transaction
-      const preBalance = tx.meta.preTokenBalances.find((b) => b.accountIndex === index)?.uiTokenAmount.amount
+      const preBalance: string | undefined = tx.meta.preTokenBalances.find((b) => b.accountIndex === index)?.uiTokenAmount.amount
         ?? (initializingVaultPubkeys.has(vault) ? "0" : undefined);
       invariant(preBalance, "preBalance must exist");
-      const postBalance = tx.meta.postTokenBalances.find((b) => b.accountIndex === index)?.uiTokenAmount.amount;
+      const postBalance: string | undefined = tx.meta.postTokenBalances.find((b) => b.accountIndex === index)?.uiTokenAmount.amount;
       invariant(postBalance, "postBalance must exist");
       return {
         account: vault,
@@ -282,20 +312,55 @@ export async function fetchAndProcessBlock(database: Connection, solana: AxiosIn
 }
 
 
-function toTxID(slot: number, orderInBlock: number): BigInt {
+type ProcessedTransaction = {
+  txid: bigint;
+  signature: string;
+  payer: string;
+  balances: { account: string, pre: string, post: string }[];
+  whirlpoolInstructions: DecodedWhirlpoolInstruction[];
+};
+
+
+function toTxID(slot: number, orderInBlock: number): bigint {
   // 40 bits for slot, 24 bits for orderInBlock
   const txid = BigInt(slot) * BigInt(2 ** 24) + BigInt(orderInBlock);
   return txid;
 }
 
 
-async function insertInstruction(txid: BigInt, order: number, ix: DecodedWhirlpoolInstruction, database: Connection) {
+async function insertInstruction(txid: bigint, order: number, ix: DecodedWhirlpoolInstruction, database: Connection) {
   const buildSQL = (ixName: string, numData: number, numKey: number, numTransfer: number): string => {
     const table = `ixs${ixName.charAt(0).toUpperCase() + ixName.slice(1)}`;
     const data = Array(numData).fill(", ?").join("");
     const key = Array(numKey).fill(", fromPubkeyBase58(?)").join("");
     const transfer = Array(numTransfer).fill(", ?").join("");
     return `INSERT INTO ${table} VALUES (?, ?${data}${key}${transfer})`;
+  };
+
+  const buildV2SQL = (ixName: string, numData: number, numKey: number, numTransfer: number): string => {
+    const table = `ixs${ixName.charAt(0).toUpperCase() + ixName.slice(1)}`;
+    const data = Array(numData).fill(", ?").join("");
+    const key = Array(numKey).fill(", fromPubkeyBase58(?)").join("");
+    const remainingAccounts = ", encodeU8U8TupleArray(?), encodeBase58PubkeyArray(?)";
+    // amount, transfer fee config initialized, transfer fee bps, transfer fee max
+    const transfer = Array(numTransfer).fill(", ?, ?, ?, ?").join("");
+    return `INSERT INTO ${table} VALUES (?, ?${data}${key}${remainingAccounts}${transfer})`;
+  };
+
+  const jsonifyRemainingAccountsInfo = (remainingAccountsInfo: RemainingAccountsInfo): string => {
+    return JSON.stringify(
+      remainingAccountsInfo.map((slice) => [slice.accountsType, slice.length])
+    );
+  };
+
+  const jsonifyRemainingAccounts = (remainingAccounts: RemainingAccounts): string => {
+    return JSON.stringify(remainingAccounts);
+  };
+
+  const flattenV2Transfer = (transfer: TransferAmountWithTransferFeeConfig) => {
+    return transfer.transferFeeConfig
+      ? [transfer.amount, 1, transfer.transferFeeConfig.basisPoints, transfer.transferFeeConfig.maximumFee]
+      : [transfer.amount, 0, 0, 0n];
   }
 
   switch (ix.name) {
@@ -829,6 +894,340 @@ async function insertInstruction(txid: BigInt, order: number, ix: DecodedWhirlpo
         ix.accounts.whirlpoolsConfig,
         ix.accounts.rewardEmissionsSuperAuthority,
         ix.accounts.newRewardEmissionsSuperAuthority,
+        // no transfer
+      ]);
+    case "collectFeesV2":
+      return database.query(buildV2SQL(ix.name, 0, 13, 2), [
+        txid,
+        order,
+        // no data
+        // key
+        ix.accounts.whirlpool,
+        ix.accounts.positionAuthority,
+        ix.accounts.position,
+        ix.accounts.positionTokenAccount,
+        ix.accounts.tokenMintA,
+        ix.accounts.tokenMintB,
+        ix.accounts.tokenOwnerAccountA,
+        ix.accounts.tokenVaultA,
+        ix.accounts.tokenOwnerAccountB,
+        ix.accounts.tokenVaultB,
+        ix.accounts.tokenProgramA,
+        ix.accounts.tokenProgramB,
+        ix.accounts.memoProgram,
+        // remainingAccounts
+        jsonifyRemainingAccountsInfo(ix.data.remainingAccountsInfo),
+        jsonifyRemainingAccounts(ix.remainingAccounts),
+        // transfer
+        ...flattenV2Transfer(ix.transfers[0]),
+        ...flattenV2Transfer(ix.transfers[1]),
+      ]);
+    case "collectProtocolFeesV2":
+      return database.query(buildV2SQL(ix.name, 0, 12, 2), [
+        txid,
+        order,
+        // no data
+        // key
+        ix.accounts.whirlpoolsConfig,
+        ix.accounts.whirlpool,
+        ix.accounts.collectProtocolFeesAuthority,
+        ix.accounts.tokenMintA,
+        ix.accounts.tokenMintB,
+        ix.accounts.tokenVaultA,
+        ix.accounts.tokenVaultB,
+        ix.accounts.tokenDestinationA,
+        ix.accounts.tokenDestinationB,
+        ix.accounts.tokenProgramA,
+        ix.accounts.tokenProgramB,
+        ix.accounts.memoProgram,
+        // remainingAccounts
+        jsonifyRemainingAccountsInfo(ix.data.remainingAccountsInfo),
+        jsonifyRemainingAccounts(ix.remainingAccounts),
+        // transfer
+        ...flattenV2Transfer(ix.transfers[0]),
+        ...flattenV2Transfer(ix.transfers[1]),
+      ]);
+    case "collectRewardV2":
+      return database.query(buildV2SQL(ix.name, 1, 9, 1), [
+        txid,
+        order,
+        // data
+        ix.data.rewardIndex,
+        // key
+        ix.accounts.whirlpool,
+        ix.accounts.positionAuthority,
+        ix.accounts.position,
+        ix.accounts.positionTokenAccount,
+        ix.accounts.rewardOwnerAccount,
+        ix.accounts.rewardMint,
+        ix.accounts.rewardVault,
+        ix.accounts.rewardTokenProgram,
+        ix.accounts.memoProgram,
+        // remainingAccounts
+        jsonifyRemainingAccountsInfo(ix.data.remainingAccountsInfo),
+        jsonifyRemainingAccounts(ix.remainingAccounts),
+        // transfer
+        ...flattenV2Transfer(ix.transfers[0]),
+      ]);
+    case "increaseLiquidityV2":
+      return database.query(buildV2SQL(ix.name, 3, 15, 2), [
+        txid,
+        order,
+        // data
+        BigInt(ix.data.liquidityAmount.toString()),
+        BigInt(ix.data.tokenMaxA.toString()),
+        BigInt(ix.data.tokenMaxB.toString()),
+        // key
+        ix.accounts.whirlpool,
+        ix.accounts.tokenProgramA,
+        ix.accounts.tokenProgramB,
+        ix.accounts.memoProgram,
+        ix.accounts.positionAuthority,
+        ix.accounts.position,
+        ix.accounts.positionTokenAccount,
+        ix.accounts.tokenMintA,
+        ix.accounts.tokenMintB,
+        ix.accounts.tokenOwnerAccountA,
+        ix.accounts.tokenOwnerAccountB,
+        ix.accounts.tokenVaultA,
+        ix.accounts.tokenVaultB,
+        ix.accounts.tickArrayLower,
+        ix.accounts.tickArrayUpper,
+        // remainingAccounts
+        jsonifyRemainingAccountsInfo(ix.data.remainingAccountsInfo),
+        jsonifyRemainingAccounts(ix.remainingAccounts),
+        // transfer
+        ...flattenV2Transfer(ix.transfers[0]),
+        ...flattenV2Transfer(ix.transfers[1]),
+      ]);
+    case "decreaseLiquidityV2":
+      return database.query(buildV2SQL(ix.name, 3, 15, 2), [
+        txid,
+        order,
+        // data
+        BigInt(ix.data.liquidityAmount.toString()),
+        BigInt(ix.data.tokenMinA.toString()),
+        BigInt(ix.data.tokenMinB.toString()),
+        // key
+        ix.accounts.whirlpool,
+        ix.accounts.tokenProgramA,
+        ix.accounts.tokenProgramB,
+        ix.accounts.memoProgram,
+        ix.accounts.positionAuthority,
+        ix.accounts.position,
+        ix.accounts.positionTokenAccount,
+        ix.accounts.tokenMintA,
+        ix.accounts.tokenMintB,
+        ix.accounts.tokenOwnerAccountA,
+        ix.accounts.tokenOwnerAccountB,
+        ix.accounts.tokenVaultA,
+        ix.accounts.tokenVaultB,
+        ix.accounts.tickArrayLower,
+        ix.accounts.tickArrayUpper,
+        // remainingAccounts
+        jsonifyRemainingAccountsInfo(ix.data.remainingAccountsInfo),
+        jsonifyRemainingAccounts(ix.remainingAccounts),
+        // transfer
+        ...flattenV2Transfer(ix.transfers[0]),
+        ...flattenV2Transfer(ix.transfers[1]),
+      ]);
+    case "swapV2":
+      return database.query(buildV2SQL(ix.name, 5, 15, 2), [
+        txid,
+        order,
+        // data
+        BigInt(ix.data.amount.toString()),
+        BigInt(ix.data.otherAmountThreshold.toString()),
+        BigInt(ix.data.sqrtPriceLimit.toString()),
+        ix.data.amountSpecifiedIsInput,
+        ix.data.aToB,
+        // key
+        ix.accounts.tokenProgramA,
+        ix.accounts.tokenProgramB,
+        ix.accounts.memoProgram,
+        ix.accounts.tokenAuthority,
+        ix.accounts.whirlpool,
+        ix.accounts.tokenMintA,
+        ix.accounts.tokenMintB,
+        ix.accounts.tokenOwnerAccountA,
+        ix.accounts.tokenVaultA,
+        ix.accounts.tokenOwnerAccountB,
+        ix.accounts.tokenVaultB,
+        ix.accounts.tickArray0,
+        ix.accounts.tickArray1,
+        ix.accounts.tickArray2,
+        ix.accounts.oracle,
+        // remainingAccounts
+        jsonifyRemainingAccountsInfo(ix.data.remainingAccountsInfo),
+        jsonifyRemainingAccounts(ix.remainingAccounts),
+        // transfer
+        ...flattenV2Transfer(ix.transfers[0]),
+        ...flattenV2Transfer(ix.transfers[1]),
+      ]);
+    case "twoHopSwapV2":
+      return database.query(buildV2SQL(ix.name, 7, 24, 3), [
+        txid,
+        order,
+        // data
+        BigInt(ix.data.amount.toString()),
+        BigInt(ix.data.otherAmountThreshold.toString()),
+        ix.data.amountSpecifiedIsInput,
+        ix.data.aToBOne,
+        ix.data.aToBTwo,
+        BigInt(ix.data.sqrtPriceLimitOne.toString()),
+        BigInt(ix.data.sqrtPriceLimitTwo.toString()),
+        // key
+        ix.accounts.whirlpoolOne,
+        ix.accounts.whirlpoolTwo,
+        ix.accounts.tokenMintInput,
+        ix.accounts.tokenMintIntermediate,
+        ix.accounts.tokenMintOutput,
+        ix.accounts.tokenProgramInput,
+        ix.accounts.tokenProgramIntermediate,
+        ix.accounts.tokenProgramOutput,
+        ix.accounts.tokenOwnerAccountInput,
+        ix.accounts.tokenVaultOneInput,
+        ix.accounts.tokenVaultOneIntermediate,
+        ix.accounts.tokenVaultTwoIntermediate,
+        ix.accounts.tokenVaultTwoOutput,
+        ix.accounts.tokenOwnerAccountOutput,
+        ix.accounts.tokenAuthority,
+        ix.accounts.tickArrayOne0,
+        ix.accounts.tickArrayOne1,
+        ix.accounts.tickArrayOne2,
+        ix.accounts.tickArrayTwo0,
+        ix.accounts.tickArrayTwo1,
+        ix.accounts.tickArrayTwo2,
+        ix.accounts.oracleOne,
+        ix.accounts.oracleTwo,
+        ix.accounts.memoProgram,
+        // remainingAccounts
+        jsonifyRemainingAccountsInfo(ix.data.remainingAccountsInfo),
+        jsonifyRemainingAccounts(ix.remainingAccounts),
+        // transfer
+        ...flattenV2Transfer(ix.transfers[0]),
+        ...flattenV2Transfer(ix.transfers[1]),
+        ...flattenV2Transfer(ix.transfers[2]),
+      ]);
+    case "initializePoolV2":
+      return database.query(buildSQL(ix.name, 2, 14, 0), [
+        txid,
+        order,
+        // data
+        ix.data.tickSpacing,
+        BigInt(ix.data.initialSqrtPrice.toString()),
+        // key
+        ix.accounts.whirlpoolsConfig,
+        ix.accounts.tokenMintA,
+        ix.accounts.tokenMintB,
+        ix.accounts.tokenBadgeA,
+        ix.accounts.tokenBadgeB,
+        ix.accounts.funder,
+        ix.accounts.whirlpool,
+        ix.accounts.tokenVaultA,
+        ix.accounts.tokenVaultB,
+        ix.accounts.feeTier,
+        ix.accounts.tokenProgramA,
+        ix.accounts.tokenProgramB,
+        ix.accounts.systemProgram,
+        ix.accounts.rent,
+        // no transfer
+      ]);
+    case "initializeRewardV2":
+      return database.query(buildSQL(ix.name, 1, 9, 0), [
+        txid,
+        order,
+        // data
+        ix.data.rewardIndex,
+        // key
+        ix.accounts.rewardAuthority,
+        ix.accounts.funder,
+        ix.accounts.whirlpool,
+        ix.accounts.rewardMint,
+        ix.accounts.rewardTokenBadge,
+        ix.accounts.rewardVault,
+        ix.accounts.rewardTokenProgram,
+        ix.accounts.systemProgram,
+        ix.accounts.rent,
+        // no transfer
+      ]);
+    case "setRewardEmissionsV2":
+      return database.query(buildSQL(ix.name, 2, 3, 0), [
+        txid,
+        order,
+        // data
+        ix.data.rewardIndex,
+        BigInt(ix.data.emissionsPerSecondX64.toString()),
+        // key
+        ix.accounts.whirlpool,
+        ix.accounts.rewardAuthority,
+        ix.accounts.rewardVault,
+        // no transfer
+      ]);
+    case "initializeConfigExtension":
+      return database.query(buildSQL(ix.name, 0, 5, 0), [
+        txid,
+        order,
+        // no data
+        // key
+        ix.accounts.whirlpoolsConfig,
+        ix.accounts.whirlpoolsConfigExtension,
+        ix.accounts.funder,
+        ix.accounts.feeAuthority,
+        ix.accounts.systemProgram,
+        // no transfer
+      ]);
+    case "initializeTokenBadge":
+      return database.query(buildSQL(ix.name, 0, 7, 0), [
+        txid,
+        order,
+        // no data
+        // key
+        ix.accounts.whirlpoolsConfig,
+        ix.accounts.whirlpoolsConfigExtension,
+        ix.accounts.tokenBadgeAuthority,
+        ix.accounts.tokenMint,
+        ix.accounts.tokenBadge,
+        ix.accounts.funder,
+        ix.accounts.systemProgram,
+        // no transfer
+      ]);
+    case "deleteTokenBadge":
+      return database.query(buildSQL(ix.name, 0, 6, 0), [
+        txid,
+        order,
+        // no data
+        // key
+        ix.accounts.whirlpoolsConfig,
+        ix.accounts.whirlpoolsConfigExtension,
+        ix.accounts.tokenBadgeAuthority,
+        ix.accounts.tokenMint,
+        ix.accounts.tokenBadge,
+        ix.accounts.receiver,
+        // no transfer
+      ]);
+    case "setConfigExtensionAuthority":
+      return database.query(buildSQL(ix.name, 0, 4, 0), [
+        txid,
+        order,
+        // no data
+        // key
+        ix.accounts.whirlpoolsConfig,
+        ix.accounts.whirlpoolsConfigExtension,
+        ix.accounts.configExtensionAuthority,
+        ix.accounts.newConfigExtensionAuthority,
+        // no transfer
+      ]);
+    case "setTokenBadgeAuthority":
+      return database.query(buildSQL(ix.name, 0, 4, 0), [
+        txid,
+        order,
+        // no data
+        // key
+        ix.accounts.whirlpoolsConfig,
+        ix.accounts.whirlpoolsConfigExtension,
+        ix.accounts.configExtensionAuthority,
+        ix.accounts.newTokenBadgeAuthority,
         // no transfer
       ]);
     default:

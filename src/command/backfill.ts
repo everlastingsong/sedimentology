@@ -43,7 +43,7 @@ async function main() {
   const worker = new Worker<undefined, void>(WorkerQueueName.BACKFILL, async (job) => {
     console.info("job consuming...");
 
-    let db: mariadb.Connection;
+    let db: mariadb.Connection | undefined;
     try {
       db = await pool.getConnection();
       await fetchBackfillSlots(db, solana, limit, maxQueuedSlots);

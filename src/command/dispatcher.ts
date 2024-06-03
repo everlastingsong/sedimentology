@@ -62,7 +62,7 @@ async function main() {
   while (true) {
     console.info("enqueue jobs...");
 
-    let db: mariadb.Connection;
+    let db: mariadb.Connection | undefined;
     let processorAddJobCount = 0;
     let processorAddBackfillJobCount = 0;
     try {
