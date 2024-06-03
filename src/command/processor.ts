@@ -41,7 +41,7 @@ async function main() {
     const slot = job.data;
     console.info("job consuming...", slot);
 
-    let db: mariadb.Connection;
+    let db: mariadb.Connection | undefined;
     try {
       db = await pool.getConnection();
       await fetchAndProcessBlock(db, solana, slot);

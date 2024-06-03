@@ -86,7 +86,7 @@ export async function fetchAndProcessBlock(database: Connection, solana: AxiosIn
   // process transactions
 
   const touchedPubkeys = new Set<string>();
-  const processedTransactions = [];
+  const processedTransactions: ProcessedTransaction[] = [];
   blockData.transactions.forEach((tx, orderInBlock) => {
     // drop failed transactions
     if (tx.meta.err !== null) return;
@@ -113,8 +113,8 @@ export async function fetchAndProcessBlock(database: Connection, solana: AxiosIn
 
     // FOR txs table
     const txid = toTxID(slot, orderInBlock);
-    const signature = tx.transaction.signatures[0];
-    const payer = tx.transaction.message.accountKeys[0];
+    const signature: string = tx.transaction.signatures[0];
+    const payer: string = tx.transaction.message.accountKeys[0];
 
     // FOR pubkeys table
     touchedPubkeys.add(payer);
@@ -234,10 +234,10 @@ export async function fetchAndProcessBlock(database: Connection, solana: AxiosIn
       invariant(index !== -1, "index must exist");
       // edge case: 4rMJC56qibPjr1PDzX7bQFmBuG6yd9CcVysoFbo8dk1Sho2eehQt6Y8NhZFEFECNvnbcNN3evFE2X47ycLxyQmA
       // initializePool + increaseLiquidity in the same transaction
-      const preBalance = tx.meta.preTokenBalances.find((b) => b.accountIndex === index)?.uiTokenAmount.amount
+      const preBalance: string | undefined = tx.meta.preTokenBalances.find((b) => b.accountIndex === index)?.uiTokenAmount.amount
         ?? (initializingVaultPubkeys.has(vault) ? "0" : undefined);
       invariant(preBalance, "preBalance must exist");
-      const postBalance = tx.meta.postTokenBalances.find((b) => b.accountIndex === index)?.uiTokenAmount.amount;
+      const postBalance: string | undefined = tx.meta.postTokenBalances.find((b) => b.accountIndex === index)?.uiTokenAmount.amount;
       invariant(postBalance, "postBalance must exist");
       return {
         account: vault,
@@ -312,14 +312,23 @@ export async function fetchAndProcessBlock(database: Connection, solana: AxiosIn
 }
 
 
-function toTxID(slot: number, orderInBlock: number): BigInt {
+type ProcessedTransaction = {
+  txid: bigint;
+  signature: string;
+  payer: string;
+  balances: { account: string, pre: string, post: string }[];
+  whirlpoolInstructions: DecodedWhirlpoolInstruction[];
+};
+
+
+function toTxID(slot: number, orderInBlock: number): bigint {
   // 40 bits for slot, 24 bits for orderInBlock
   const txid = BigInt(slot) * BigInt(2 ** 24) + BigInt(orderInBlock);
   return txid;
 }
 
 
-async function insertInstruction(txid: BigInt, order: number, ix: DecodedWhirlpoolInstruction, database: Connection) {
+async function insertInstruction(txid: bigint, order: number, ix: DecodedWhirlpoolInstruction, database: Connection) {
   const buildSQL = (ixName: string, numData: number, numKey: number, numTransfer: number): string => {
     const table = `ixs${ixName.charAt(0).toUpperCase() + ixName.slice(1)}`;
     const data = Array(numData).fill(", ?").join("");
@@ -333,7 +342,8 @@ async function insertInstruction(txid: BigInt, order: number, ix: DecodedWhirlpo
     const data = Array(numData).fill(", ?").join("");
     const key = Array(numKey).fill(", fromPubkeyBase58(?)").join("");
     const remainingAccounts = ", encodeU8U8TupleArray(?), encodeBase58PubkeyArray(?)";
-    const transfer = Array(numTransfer).fill(", ?, ?, ?").join(""); // amount, transfer fee bps, transfer fee max
+    // amount, transfer fee config initialized, transfer fee bps, transfer fee max
+    const transfer = Array(numTransfer).fill(", ?, ?, ?, ?").join("");
     return `INSERT INTO ${table} VALUES (?, ?${data}${key}${remainingAccounts}${transfer})`;
   };
 
@@ -348,7 +358,9 @@ async function insertInstruction(txid: BigInt, order: number, ix: DecodedWhirlpo
   };
 
   const flattenV2Transfer = (transfer: TransferAmountWithTransferFeeConfig) => {
-    return [transfer.amount, transfer.transferFeeConfig.basisPoints, transfer.transferFeeConfig.maximumFee];
+    return transfer.transferFeeConfig
+      ? [transfer.amount, 1, transfer.transferFeeConfig.basisPoints, transfer.transferFeeConfig.maximumFee]
+      : [transfer.amount, 0, 0, 0n];
   }
 
   switch (ix.name) {

@@ -43,7 +43,7 @@ async function main() {
   const worker = new Worker<undefined, void>(WorkerQueueName.SEQUENCER, async (job) => {
     console.info("job consuming...");
 
-    let db: mariadb.Connection;
+    let db: mariadb.Connection | undefined;
     try {
       db = await pool.getConnection();
       await fetchSlots(db, solana, limit, maxQueuedSlots);

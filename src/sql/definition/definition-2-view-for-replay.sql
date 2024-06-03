@@ -637,11 +637,13 @@ SELECT
         'remainingAccountsKeys', JSON_EXTRACT(decodeBase58PubkeyArray(t.remainingAccountsKeys), '$'),
         'transfer0', JSON_OBJECT(
             'amount', toU64String(t.transferAmount0),
+            'transferFeeConfigOpt', t.transferFeeConfigOpt0,
             'transferFeeConfigBps', t.transferFeeConfigBps0,
             'transferFeeConfigMax', toU64String(t.transferFeeConfigMax0)
         ),
         'transfer1', JSON_OBJECT(
             'amount', toU64String(t.transferAmount1),
+            'transferFeeConfigOpt', t.transferFeeConfigOpt1,
             'transferFeeConfigBps', t.transferFeeConfigBps1,
             'transferFeeConfigMax', toU64String(t.transferFeeConfigMax1)
         )
@@ -670,11 +672,13 @@ SELECT
         'remainingAccountsKeys', JSON_EXTRACT(decodeBase58PubkeyArray(t.remainingAccountsKeys), '$'),
         'transfer0', JSON_OBJECT(
             'amount', toU64String(t.transferAmount0),
+            'transferFeeConfigOpt', t.transferFeeConfigOpt0,
             'transferFeeConfigBps', t.transferFeeConfigBps0,
             'transferFeeConfigMax', toU64String(t.transferFeeConfigMax0)
         ),
         'transfer1', JSON_OBJECT(
             'amount', toU64String(t.transferAmount1),
+            'transferFeeConfigOpt', t.transferFeeConfigOpt1,
             'transferFeeConfigBps', t.transferFeeConfigBps1,
             'transferFeeConfigMax', toU64String(t.transferFeeConfigMax1)
         )
@@ -701,6 +705,7 @@ SELECT
         'remainingAccountsKeys', JSON_EXTRACT(decodeBase58PubkeyArray(t.remainingAccountsKeys), '$'),
         'transfer0', JSON_OBJECT(
             'amount', toU64String(t.transferAmount0),
+            'transferFeeConfigOpt', t.transferFeeConfigOpt0,
             'transferFeeConfigBps', t.transferFeeConfigBps0,
             'transferFeeConfigMax', toU64String(t.transferFeeConfigMax0)
         )
@@ -735,11 +740,13 @@ SELECT
         'remainingAccountsKeys', JSON_EXTRACT(decodeBase58PubkeyArray(t.remainingAccountsKeys), '$'),
         'transfer0', JSON_OBJECT(
             'amount', toU64String(t.transferAmount0),
+            'transferFeeConfigOpt', t.transferFeeConfigOpt0,
             'transferFeeConfigBps', t.transferFeeConfigBps0,
             'transferFeeConfigMax', toU64String(t.transferFeeConfigMax0)
         ),
         'transfer1', JSON_OBJECT(
             'amount', toU64String(t.transferAmount1),
+            'transferFeeConfigOpt', t.transferFeeConfigOpt1,
             'transferFeeConfigBps', t.transferFeeConfigBps1,
             'transferFeeConfigMax', toU64String(t.transferFeeConfigMax1)
         )
@@ -774,11 +781,13 @@ SELECT
         'remainingAccountsKeys', JSON_EXTRACT(decodeBase58PubkeyArray(t.remainingAccountsKeys), '$'),
         'transfer0', JSON_OBJECT(
             'amount', toU64String(t.transferAmount0),
+            'transferFeeConfigOpt', t.transferFeeConfigOpt0,
             'transferFeeConfigBps', t.transferFeeConfigBps0,
             'transferFeeConfigMax', toU64String(t.transferFeeConfigMax0)
         ),
         'transfer1', JSON_OBJECT(
             'amount', toU64String(t.transferAmount1),
+            'transferFeeConfigOpt', t.transferFeeConfigOpt1,
             'transferFeeConfigBps', t.transferFeeConfigBps1,
             'transferFeeConfigMax', toU64String(t.transferFeeConfigMax1)
         )
@@ -815,11 +824,13 @@ SELECT
         'remainingAccountsKeys', JSON_EXTRACT(decodeBase58PubkeyArray(t.remainingAccountsKeys), '$'),
         'transfer0', JSON_OBJECT(
             'amount', toU64String(t.transferAmount0),
+            'transferFeeConfigOpt', t.transferFeeConfigOpt0,
             'transferFeeConfigBps', t.transferFeeConfigBps0,
             'transferFeeConfigMax', toU64String(t.transferFeeConfigMax0)
         ),
         'transfer1', JSON_OBJECT(
             'amount', toU64String(t.transferAmount1),
+            'transferFeeConfigOpt', t.transferFeeConfigOpt1,
             'transferFeeConfigBps', t.transferFeeConfigBps1,
             'transferFeeConfigMax', toU64String(t.transferFeeConfigMax1)
         )
@@ -867,16 +878,19 @@ SELECT
         'remainingAccountsKeys', JSON_EXTRACT(decodeBase58PubkeyArray(t.remainingAccountsKeys), '$'),
         'transfer0', JSON_OBJECT(
             'amount', toU64String(t.transferAmount0),
+            'transferFeeConfigOpt', t.transferFeeConfigOpt0,
             'transferFeeConfigBps', t.transferFeeConfigBps0,
             'transferFeeConfigMax', toU64String(t.transferFeeConfigMax0)
         ),
         'transfer1', JSON_OBJECT(
             'amount', toU64String(t.transferAmount1),
+            'transferFeeConfigOpt', t.transferFeeConfigOpt1,
             'transferFeeConfigBps', t.transferFeeConfigBps1,
             'transferFeeConfigMax', toU64String(t.transferFeeConfigMax1)
         ),
         'transfer2', JSON_OBJECT(
             'amount', toU64String(t.transferAmount2),
+            'transferFeeConfigOpt', t.transferFeeConfigOpt2,
             'transferFeeConfigBps', t.transferFeeConfigBps2,
             'transferFeeConfigMax', toU64String(t.transferFeeConfigMax2)
         )
