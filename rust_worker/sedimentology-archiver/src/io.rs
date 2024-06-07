@@ -4,10 +4,7 @@ use flate2::write::GzEncoder;
 use mysql::prelude::*;
 use mysql::*;
 use replay_engine::decoded_instructions::{from_json, DecodedInstruction};
-use replay_engine::replay_environment::solana_sdk::account::AccountSharedData;
-use replay_engine::types::AccountMap;
 use serde_derive::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::io::{Read, Write};
 use std::{
   fs::File,
@@ -32,7 +29,7 @@ pub struct Instruction {
     pub ix_name: String,
     pub ix: DecodedInstruction,
 }
-
+/* 
 pub struct CompressedState {
     pub date: u32,
     pub slot: u64,
@@ -50,7 +47,7 @@ pub struct State {
     pub program_data: Vec<u8>,
     pub accounts: AccountMap,
 }
-
+*/
 #[derive(Debug, Deserialize, Serialize)]
 struct PubkeyAndDataBase64 {
     pubkey: String,

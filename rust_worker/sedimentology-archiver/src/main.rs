@@ -6,8 +6,6 @@ use std::sync::mpsc::channel;
 use mysql::*;
 use clap::Parser;
 
-use replay_engine::decoded_instructions::DecodedInstruction::{ProgramDeployInstruction, WhirlpoolInstruction};
-
 mod io;
 mod date;
 mod schema;
@@ -66,7 +64,7 @@ fn main() {
     }).expect("Error setting Ctrl-C handler");
 
     // archive loop
-    let sleep_duration = Duration::from_secs(3600);
+    let sleep_duration = Duration::from_secs(600);
     loop {
         // graceful shutdown
         let should_shutdown = rx.try_recv().is_ok();
