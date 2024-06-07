@@ -1,6 +1,7 @@
 use std::thread::sleep;
 use std::time::Duration;
 use ctrlc;
+use replay_engine::types::Slot;
 use std::sync::mpsc::channel;
 use chrono::{Utc, TimeZone};
 
@@ -53,13 +54,15 @@ fn main() {
     println!("state.block_height = {:?}", state.block_height);
     println!("state.block_time = {:?}", state.block_time);
     println!("state.program_data = {:?}", state.program_data.len());
-    println!("state.accounts = {:?}", state.accounts.len());
+    println!("state.accounts");
 
     // build replay engine
     let mut replay_engine = ReplayEngine::new(
-        state.slot,
-        state.block_height,
-        state.block_time,
+        Slot::new(
+            state.slot,
+            state.block_height,
+            state.block_time,
+        ),
         state.program_data,
         state.accounts,
     );
@@ -97,7 +100,7 @@ fn main() {
         if next_slots.len() == 0 {
             println!("no more slots to replay now");
         } else {
-            println!("repalying {} slots ...", next_slots.len());
+            println!("replaying {} slots ...", next_slots.len());
         }
 
         // process each slot
@@ -123,15 +126,13 @@ fn main() {
                 println!("saving state of {} ...", current_yyyymmdd_date);
                 println!("last slot of {} is {:?}", current_yyyymmdd_date, replay_engine.get_slot());
 
-                let new_state = io::State {
-                    date: current_yyyymmdd_date,
-                    slot: replay_engine.get_slot().slot,
-                    block_height: replay_engine.get_slot().block_height,
-                    block_time: replay_engine.get_slot().block_time,
-                    program_data: replay_engine.get_program_data().clone(),
-                    accounts: replay_engine.get_accounts().clone(),
-                };
-                io::advance_replayer_state(&new_state, &mut conn).unwrap();
+                io::advance_replayer_state(
+                    current_yyyymmdd_date,
+                    replay_engine.get_slot(),
+                    replay_engine.get_program_data(),
+                    replay_engine.get_accounts(),
+                    &mut conn
+                ).unwrap();
 
                 println!("saved state of {}", current_yyyymmdd_date);
             }

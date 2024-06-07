@@ -4,17 +4,10 @@ use flate2::write::GzEncoder;
 use mysql::prelude::*;
 use mysql::*;
 use replay_engine::decoded_instructions::{from_json, DecodedInstruction};
-use replay_engine::types::AccountMap;
+use replay_engine::account_data_store::AccountDataStore;
+use replay_engine::types::{ProgramData, Slot};
 use serde_derive::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::io::{Read, Write};
-
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
-pub struct Slot {
-    pub slot: u64,
-    pub block_height: u64,
-    pub block_time: i64,
-}
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Instruction {
@@ -39,7 +32,7 @@ pub struct State {
     pub block_height: u64,
     pub block_time: i64,
     pub program_data: Vec<u8>,
-    pub accounts: AccountMap,
+    pub accounts: AccountDataStore,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -94,13 +87,13 @@ pub fn fetch_state(date: u32, database: &mut PooledConn) -> State {
         .has_headers(false)
         .from_reader(account_data_gz);
 
-    let mut account_map = AccountMap::new();
+    let mut accounts = AccountDataStore::new_on_memory();
     account_csv_reader
         .deserialize::<PubkeyAndDataBase64>()
         .for_each(|row| {
             let row = row.unwrap();
             let data = BASE64_STANDARD.decode(row.data_base64).unwrap();
-            account_map.insert(row.pubkey, data);
+            accounts.upsert(&row.pubkey, &data).unwrap();
         });
 
     return State {
@@ -109,7 +102,7 @@ pub fn fetch_state(date: u32, database: &mut PooledConn) -> State {
         block_height,
         block_time,
         program_data,
-        accounts: account_map,
+        accounts,
     };
 }
 
@@ -230,9 +223,15 @@ pub fn fetch_instructions_in_slot(slot: u64, database: &mut PooledConn) -> Vec<I
     return ixs_in_slot;
 }
 
-pub fn advance_replayer_state(state: &State, database: &mut PooledConn) -> Result<()> {
+pub fn advance_replayer_state(
+    date: u32,
+    slot: &Slot,
+    program_data: &ProgramData,
+    accounts: &AccountDataStore,
+    database: &mut PooledConn
+) -> Result<()> {
   //  Vec<u8> -> base64 encoded -> gzip encoded
-  let program_data_base64 = BASE64_STANDARD.encode(&state.program_data);
+  let program_data_base64 = BASE64_STANDARD.encode(program_data);
   let mut program_data_gz = GzEncoder::new(Vec::new(), flate2::Compression::default());
   program_data_gz.write_all(program_data_base64.as_bytes()).unwrap();
   let program_compressed_data = program_data_gz.finish().unwrap();
@@ -243,14 +242,17 @@ pub fn advance_replayer_state(state: &State, database: &mut PooledConn) -> Resul
       .has_headers(false)
       .from_writer(encoder);
 
-  for (pubkey, data) in state.accounts.iter() {
-      let data_base64 = BASE64_STANDARD.encode(data);
-      let row = PubkeyAndDataBase64 {
-          pubkey: pubkey.to_string(),
-          data_base64,
-      };
-      writer.serialize(row).unwrap();
-  }
+  accounts.traverse(|pubkey, data| {
+    let data_base64 = BASE64_STANDARD.encode(data);
+    let row = PubkeyAndDataBase64 {
+        pubkey: pubkey.to_string(),
+        data_base64,
+    };
+    writer.serialize(row).unwrap();
+
+    Ok(())
+  }).unwrap();
+
   writer.flush().unwrap();
   let account_compressed_data = writer.into_inner().unwrap().finish().unwrap();
 
@@ -259,8 +261,8 @@ pub fn advance_replayer_state(state: &State, database: &mut PooledConn) -> Resul
   tx.exec_drop(
       "INSERT INTO states (date, slot, programCompressedData, accountCompressedData) VALUES (:d, :s, :p, :a)",
       params! {
-          "d" => state.date,
-          "s" => state.slot,
+          "d" => date,
+          "s" => slot.slot,
           "p" => program_compressed_data,
           "a" => account_compressed_data,
       },
@@ -269,7 +271,7 @@ pub fn advance_replayer_state(state: &State, database: &mut PooledConn) -> Resul
   tx.exec_drop(
     "UPDATE admReplayerState SET latestReplayedDate = :d",
     params! {
-        "d" => state.date,
+        "d" => date,
     },
   ).unwrap();
 
