@@ -50,9 +50,12 @@ async function main() {
   );
 
   // insert into deployments
+  //
+  // DO NOT USE TO_BASE64 FUNCTION ON MARIADB (it insert new line every 76 chars)
+  //
   await db.query(
-    "INSERT INTO ixsProgramDeploy VALUES(?, ?, TO_BASE64(BINARY(?)))",
-    [txidBigInt, order, binaryBuffer]
+    "INSERT INTO ixsProgramDeploy VALUES(?, ?, ?)",
+    [txidBigInt, order, binaryBuffer.toString("base64")]
   );
 
   await db.commit();
