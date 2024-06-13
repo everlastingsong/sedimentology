@@ -139,3 +139,6 @@ playground/data_ignored
 rust_worker/target
 rust_worker/tmp
 
+# SSL
+*.der
+*.pem

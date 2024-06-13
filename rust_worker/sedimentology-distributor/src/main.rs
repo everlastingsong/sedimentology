@@ -1,4 +1,6 @@
-use std::thread::sleep;
+use std::borrow::Cow;
+use std::path::PathBuf;
+use std::{path::Path, thread::sleep};
 use std::time::Duration;
 use ctrlc;
 use std::sync::mpsc::channel;
@@ -12,6 +14,9 @@ mod schema;
 
 #[derive(Parser, Debug)]
 struct Args {
+    #[clap(long, id = "profile")]
+    profile: String,
+
     #[clap(long, id = "mariadb-host", default_value = "localhost")]
     mariadb_host: Option<String>,
 
@@ -27,20 +32,35 @@ struct Args {
     #[clap(long, id = "mariadb-database", default_value = "whirlpool")]
     mariadb_database: Option<String>,
 
-    #[clap(long, id = "distributor-mariadb-host", default_value = "localhost")]
-    distributor_mariadb_host: Option<String>,
+    #[clap(long, id = "dest-mariadb-host", default_value = "localhost")]
+    dest_mariadb_host: Option<String>,
 
-    #[clap(long, id = "distributor-mariadb-port", default_value = "3306")]
-    distributor_mariadb_port: Option<u16>,
+    #[clap(long, id = "dest-mariadb-port", default_value = "3306")]
+    dest_mariadb_port: Option<u16>,
 
-    #[clap(long, id = "distributor-mariadb-user", default_value = "root")]
-    distributor_mariadb_user: Option<String>,
+    #[clap(long, id = "dest-mariadb-user", default_value = "distributor")]
+    dest_mariadb_user: Option<String>,
 
-    #[clap(long, id = "distributor-mariadb-password", default_value = "password")]
-    distributor_mariadb_password: Option<String>,
+    #[clap(long, id = "dest-mariadb-password", default_value = "password")]
+    dest_mariadb_password: Option<String>,
 
-    #[clap(long, id = "distributor-mariadb-database", default_value = "whirlpool")]
-    distributor_mariadb_database: Option<String>,
+    #[clap(long, id = "dest-mariadb-database", default_value = "sedimentology")]
+    dest_mariadb_database: Option<String>,
+
+    // acceptable combination:
+    // --ssl --client-cert-path <path> --client-key-path <path>
+    // --ssl --client-cert-path <path> --client-key-path <path> --root-cert-path <path>
+    #[clap(long, id = "ssl", requires_all = ["client-cert-path", "client-key-path"])]
+    ssl: bool,
+
+    #[clap(long, id = "root-cert-path", requires = "ssl")]
+    root_cert_path: Option<String>,
+
+    #[clap(long, id = "client-cert-path", requires = "ssl")]
+    client_cert_path: Option<String>,
+
+    #[clap(long, id = "client-key-path", requires = "ssl")]
+    client_key_path: Option<String>,
 
     // 648000 = 2.5 * 3600 * 24 * 3 (at least 3 days)
     // 10KB/message * 648000 = 6,480,000 KB
@@ -49,7 +69,7 @@ struct Args {
 }
 
 fn main() {
-    // connect to mariadb and distributor mariadb
+    // connect to mariadb
     let args = Args::parse();
     let mariadb_url = format!("mysql://{}:{}@{}:{}/{}",
                       args.mariadb_user.unwrap(),
@@ -60,19 +80,44 @@ fn main() {
     let pool = Pool::new(mariadb_url.as_str()).unwrap();
     let mut conn = pool.get_conn().unwrap();
 
-    let distributor_mariadb_url = format!("mysql://{}:{}@{}:{}/{}",
-                      args.distributor_mariadb_user.unwrap(),
-                      args.distributor_mariadb_password.unwrap(),
-                      args.distributor_mariadb_host.unwrap(),
-                      args.distributor_mariadb_port.unwrap(),
-                      args.distributor_mariadb_database.unwrap());
-    let distributor_pool = Pool::new(distributor_mariadb_url.as_str()).unwrap();
-    let mut distributor_conn = distributor_pool.get_conn().unwrap();
+    // connect to dest mariadb (with SSL if params provided)
+    let mut dest_mariadb_opts_builder = OptsBuilder::new();
+    dest_mariadb_opts_builder = dest_mariadb_opts_builder
+        .ip_or_hostname(Some(args.dest_mariadb_host.unwrap()))
+        .tcp_port(args.dest_mariadb_port.unwrap())
+        .user(Some(args.dest_mariadb_user.unwrap()))
+        .pass(Some(args.dest_mariadb_password.unwrap()))
+        .db_name(Some(args.dest_mariadb_database.unwrap()));
+    if args.ssl {
+        // client authentication is must if SSL is used
+        let client_cert_path = Cow::Owned(PathBuf::from(args.client_cert_path.unwrap()));
+        let client_key_path = Cow::Owned(PathBuf::from(args.client_key_path.unwrap()));
+        let identity = ClientIdentity::new(
+            client_cert_path,
+            client_key_path,
+        );
 
+        let root_cert_path = if let Some(root_cert_path) = args.root_cert_path {
+            Some(Cow::Owned(PathBuf::from(root_cert_path)))
+        } else {
+            None
+        };
+
+        let mut ssl_opts = SslOpts::default();
+        ssl_opts = ssl_opts
+            .with_client_identity(Some(identity))
+            .with_root_cert_path(root_cert_path);
+        
+        dest_mariadb_opts_builder = dest_mariadb_opts_builder.ssl_opts(ssl_opts);
+    }
+    let dest_pool = Pool::new(dest_mariadb_opts_builder).unwrap();
+    let mut dest_conn = dest_pool.get_conn().unwrap();
+
+    let profile = args.profile;
     let keep_block_height = args.keep_block_height.unwrap();
 
     // initial state loading
-    let (initial_latest_distributed_slot, initial_latest_distributed_block_height) = io::fetch_latest_distributed_slot(&mut distributor_conn);
+    let (initial_latest_distributed_slot, initial_latest_distributed_block_height) = io::fetch_latest_distributed_slot(&mut dest_conn);
     println!("latest_distributed_slot = {}", initial_latest_distributed_slot);
 
     // setup handler for graceful shutdown
@@ -121,7 +166,7 @@ fn main() {
 
             let next_latest_distributed_slot = transactions.last().unwrap().0;
 
-            io::advance_distributor_state(&transactions, keep_block_height, &mut distributor_conn).unwrap();
+            io::advance_distributor_state(&transactions, keep_block_height, &mut dest_conn).unwrap();
 
             latest_distributed_slot = next_latest_distributed_slot;
         }
