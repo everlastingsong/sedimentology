@@ -10,7 +10,7 @@ SET NAMES utf8mb4;
 --
 -- TABLE
 --
-CREATE TABLE `admDistributedState` (
+CREATE TABLE `admDistributorDestState` (
   `latestDistributedBlockSlot` bigint(11) unsigned NOT NULL,
   `latestDistributedBlockHeight` bigint(11) unsigned NOT NULL,
   `latestDistributedBlockTime` bigint(11) unsigned NOT NULL

@@ -13,6 +13,8 @@ SET NAMES utf8mb4;
 CREATE TABLE `admDistributorState` (
   `profile` varchar(64) NOT NULL,
   `latestDistributedBlockSlot` bigint(11) unsigned NOT NULL,
+  `latestDistributedBlockHeight` bigint(11) unsigned NOT NULL,
+  `latestDistributedBlockTime` bigint(11) unsigned NOT NULL,
   PRIMARY KEY (`profile`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 

@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 use std::path::PathBuf;
-use std::{path::Path, thread::sleep};
+use std::thread::sleep;
 use std::time::Duration;
 use ctrlc;
 use std::sync::mpsc::channel;
@@ -68,6 +68,8 @@ struct Args {
     keep_block_height: Option<u64>
 }
 
+const FETCH_CHUNK_SIZE: u16 = 192; // > 2.5 * 60 (blocks per minute)
+
 fn main() {
     // connect to mariadb
     let args = Args::parse();
@@ -117,8 +119,18 @@ fn main() {
     let keep_block_height = args.keep_block_height.unwrap();
 
     // initial state loading
-    let (initial_latest_distributed_slot, initial_latest_distributed_block_height) = io::fetch_latest_distributed_slot(&mut dest_conn);
-    println!("latest_distributed_slot = {}", initial_latest_distributed_slot);
+    let (initial_latest_distributed_slot, initial_latest_distributed_block_height) = io::fetch_latest_distributed_slot(&profile, &mut conn);
+    println!("latest_distributed(src)  slot = {}, height = {}", initial_latest_distributed_slot, initial_latest_distributed_block_height);
+    let (initial_dest_latest_distributed_slot, initial_dest_latest_distributed_block_height) = io::fetch_dest_latest_distributed_slot(&mut dest_conn);
+    println!("latest_distributed(dest) slot = {}, height = {}", initial_dest_latest_distributed_slot, initial_dest_latest_distributed_block_height);
+
+    assert!(initial_dest_latest_distributed_slot >= initial_latest_distributed_slot);
+    assert!(
+        // normal case
+        initial_dest_latest_distributed_slot == initial_latest_distributed_slot ||
+        // failed to update (local) distributor state only
+        initial_dest_latest_distributed_block_height <= initial_latest_distributed_block_height + u64::from(FETCH_CHUNK_SIZE)
+    );
 
     // setup handler for graceful shutdown
     let (tx, rx) = channel();
@@ -127,12 +139,17 @@ fn main() {
         tx.send(()).unwrap();
     }).expect("Error setting Ctrl-C handler");
 
-    let mut latest_distributed_slot = io::fetch_slot_info(initial_latest_distributed_slot, &mut conn);
-    assert_eq!(latest_distributed_slot.slot, initial_latest_distributed_slot);
-    assert_eq!(latest_distributed_slot.block_height, initial_latest_distributed_block_height);
+    // use "dest" as start point
+    let mut latest_distributed_slot = io::fetch_slot_info(initial_dest_latest_distributed_slot, &mut conn);
+    assert_eq!(latest_distributed_slot.slot, initial_dest_latest_distributed_slot);
+    assert_eq!(latest_distributed_slot.block_height, initial_dest_latest_distributed_block_height);
+
+    // patch gap
+    if initial_dest_latest_distributed_slot > initial_latest_distributed_slot {
+        io::advance_distributor_state(&profile, &latest_distributed_slot, &mut conn).unwrap();
+    }
 
     // distributor loop
-    let fetch_chunk_size = 192u16; // > 2.5 * 60 (blocks per minute)
     let sleep_duration = Duration::from_millis(500);
     loop {
         // graceful shutdown
@@ -148,8 +165,8 @@ fn main() {
             Utc.timestamp_opt(latest_distributed_slot.block_time, 0).unwrap().format("%Y/%m/%d %T").to_string()
         );
 
-        let mut next_slots = io::fetch_next_slot_infos(latest_distributed_slot.slot, fetch_chunk_size, &mut conn);
-        let is_full_fetch = next_slots.len() == fetch_chunk_size as usize;
+        let mut next_slots = io::fetch_next_slot_infos(latest_distributed_slot.slot, FETCH_CHUNK_SIZE, &mut conn);
+        let is_full_fetch = next_slots.len() == FETCH_CHUNK_SIZE as usize;
 
         assert_eq!(next_slots[0].slot, latest_distributed_slot.slot);
         next_slots.remove(0);
@@ -166,7 +183,9 @@ fn main() {
 
             let next_latest_distributed_slot = transactions.last().unwrap().0;
 
-            io::advance_distributor_state(&transactions, keep_block_height, &mut dest_conn).unwrap();
+            // update admDistributorDestState, then update admDistributorState (maximum difference should be <= FETCH_CHUNK_SIZE)
+            io::advance_distributor_dest_state(&transactions, keep_block_height, &mut dest_conn).unwrap();
+            io::advance_distributor_state(&profile, &next_latest_distributed_slot, &mut conn).unwrap();
 
             latest_distributed_slot = next_latest_distributed_slot;
         }
