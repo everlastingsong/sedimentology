@@ -89,7 +89,9 @@ fn main() {
         .tcp_port(args.dest_mariadb_port.unwrap())
         .user(Some(args.dest_mariadb_user.unwrap()))
         .pass(Some(args.dest_mariadb_password.unwrap()))
-        .db_name(Some(args.dest_mariadb_database.unwrap()));
+        .db_name(Some(args.dest_mariadb_database.unwrap()))
+        // large data will be compressed using zstd, so not use compression on mariadb connection
+        .compress(Some(Compression::new(0)));
     if args.ssl {
         // client authentication is must if SSL is used
         let client_cert_path = Cow::Owned(PathBuf::from(args.client_cert_path.unwrap()));
@@ -188,6 +190,14 @@ fn main() {
             io::advance_distributor_state(&profile, &next_latest_distributed_slot, &mut conn).unwrap();
 
             latest_distributed_slot = next_latest_distributed_slot;
+
+            println!(
+                "distributed slot={}, height={}, time={}({})",
+                latest_distributed_slot.slot,
+                latest_distributed_slot.block_height,
+                latest_distributed_slot.block_time,
+                Utc.timestamp_opt(latest_distributed_slot.block_time, 0).unwrap().format("%Y/%m/%d %T").to_string()
+            );
         }
 
         if !is_full_fetch {
