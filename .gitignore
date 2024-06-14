@@ -142,3 +142,6 @@ rust_worker/tmp
 # SSL
 *.der
 *.pem
+
+# template only
+ecosystem.config.js
