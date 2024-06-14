@@ -94,10 +94,12 @@ pub fn advance_distributor_dest_state(
     transactions: &Vec<(Slot, String)>,
     keep_block_height: u64,
     database: &mut PooledConn
-) -> Result<()> {
+) -> Result<(usize, usize)> {
   let mut tx = database.start_transaction(TxOpts::default()).unwrap();
   let compression_level = 3; // standard level
 
+  let mut total_data_size = 0usize;
+  let mut total_compressed_data_size = 0usize;
   for (slot, data) in transactions {
     let compressed = zstd::encode_all(data.as_bytes(), compression_level).unwrap();
 
@@ -105,6 +107,9 @@ pub fn advance_distributor_dest_state(
     let decoded = zstd::decode_all(compressed.as_slice()).unwrap();
     let decoded_data = std::str::from_utf8(&decoded).unwrap();
     assert_eq!(decoded_data, data);
+
+    total_data_size += data.len();
+    total_compressed_data_size += compressed.len();
 
     tx.exec_drop(
         "INSERT INTO transactions (slot, blockHeight, blockTime, data) VALUES (:s, :h, :t, :d)",
@@ -138,7 +143,7 @@ pub fn advance_distributor_dest_state(
 
   tx.commit().unwrap();
 
-  return Ok(());  
+  return Ok((total_data_size, total_compressed_data_size));  
 }
 
 pub fn advance_distributor_state(

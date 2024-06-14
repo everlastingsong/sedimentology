@@ -47,25 +47,31 @@ struct Args {
     #[clap(long, id = "dest-mariadb-database", default_value = "sedimentology")]
     dest_mariadb_database: Option<String>,
 
+    // 648000 = 2.5 * 3600 * 24 * 3 (at least 3 days)
+    // 10KB/slot * 648000 = 6,480,000 KB ~ 6.33 GB
+    #[clap(long, id = "keep-block-height", default_value = "648000")]
+    keep_block_height: Option<u64>,
+
     // acceptable combination:
     // --ssl --client-cert-path <path> --client-key-path <path>
     // --ssl --client-cert-path <path> --client-key-path <path> --root-cert-path <path>
     #[clap(long, id = "ssl", requires_all = ["client-cert-path", "client-key-path"])]
     ssl: bool,
 
-    #[clap(long, id = "root-cert-path", requires = "ssl")]
+    // must be DER file format
+    // convert from PEM: openssl x509 -in ca-cert.pem -outform der -out ca-cert.der
+    #[clap(long, id = "root-cert-path", requires = "ssl", help = "file format must be DER")]
     root_cert_path: Option<String>,
 
-    #[clap(long, id = "client-cert-path", requires = "ssl")]
+    // must be DER file format
+    // convert from PEM:  openssl x509 -in cert.pem -outform der -out cert.der
+    #[clap(long, id = "client-cert-path", requires = "ssl", help = "file format must be DER")]
     client_cert_path: Option<String>,
 
-    #[clap(long, id = "client-key-path", requires = "ssl")]
+    // must be DER file format
+    // convert from PEM: openssl rsa -in key.pem -outform der -out key.der
+    #[clap(long, id = "client-key-path", requires = "ssl", help = "file format must be DER")]
     client_key_path: Option<String>,
-
-    // 648000 = 2.5 * 3600 * 24 * 3 (at least 3 days)
-    // 10KB/message * 648000 = 6,480,000 KB
-    #[clap(long, id = "keep-block-height", default_value = "648000")]
-    keep_block_height: Option<u64>
 }
 
 const FETCH_CHUNK_SIZE: u16 = 192; // > 2.5 * 60 (blocks per minute)
@@ -186,13 +192,15 @@ fn main() {
             let next_latest_distributed_slot = transactions.last().unwrap().0;
 
             // update admDistributorDestState, then update admDistributorState (maximum difference should be <= FETCH_CHUNK_SIZE)
-            io::advance_distributor_dest_state(&transactions, keep_block_height, &mut dest_conn).unwrap();
+            let sent_size = io::advance_distributor_dest_state(&transactions, keep_block_height, &mut dest_conn).unwrap();
             io::advance_distributor_state(&profile, &next_latest_distributed_slot, &mut conn).unwrap();
 
             latest_distributed_slot = next_latest_distributed_slot;
 
             println!(
-                "distributed slot={}, height={}, time={}({})",
+                "distributed bytes={}(avg {}) slot={}, height={}, time={}({})",
+                sent_size.1,
+                sent_size.1 / transactions.len(),
                 latest_distributed_slot.slot,
                 latest_distributed_slot.block_height,
                 latest_distributed_slot.block_time,
