@@ -13,6 +13,9 @@ mod command;
 
 #[derive(Parser, Debug)]
 struct Args {
+    #[clap(long, id = "profile")]
+    profile: String,
+
     #[clap(long, id = "mariadb-host", default_value = "localhost")]
     mariadb_host: Option<String>,
 
@@ -27,9 +30,6 @@ struct Args {
 
     #[clap(long, id = "mariadb-database", default_value = "whirlpool")]
     mariadb_database: Option<String>,
-
-    #[clap(long, id = "profile")]
-    profile: String,
 
     // rclone copyto <localfile> <rclone-remote-path>/<filename>
     // e.g. r2:sedimentology/alpha

@@ -10,12 +10,19 @@ SET NAMES utf8mb4;
 --
 -- TABLE
 --
-CREATE TABLE `admDistributorState` (
-  `profile` varchar(64) NOT NULL,
+CREATE TABLE `admDistributorDestState` (
   `latestDistributedBlockSlot` bigint(11) unsigned NOT NULL,
   `latestDistributedBlockHeight` bigint(11) unsigned NOT NULL,
-  `latestDistributedBlockTime` bigint(11) unsigned NOT NULL,
-  PRIMARY KEY (`profile`)
+  `latestDistributedBlockTime` bigint(11) unsigned NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+
+CREATE TABLE `transactions` (
+  `slot` bigint(11) unsigned NOT NULL,
+  `blockHeight` bigint(11) unsigned NOT NULL,
+  `blockTime` int(11) unsigned NOT NULL,
+  `data` longblob NOT NULL COMMENT 'zstd json',
+  PRIMARY KEY (`slot`),
+  KEY `blockHeight` (`blockHeight`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 

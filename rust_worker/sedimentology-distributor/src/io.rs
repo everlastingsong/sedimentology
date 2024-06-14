@@ -18,18 +18,37 @@ pub struct Instruction {
     pub ix: DecodedInstruction,
 }
 
-pub fn fetch_latest_distributed_slot(database: &mut PooledConn) -> (u64, u64) {
+pub fn fetch_latest_distributed_slot(profile: &String, database: &mut PooledConn) -> (u64, u64) {
     let state: Option<(u64, u64)> = database
         .exec_first(
             "
         SELECT
           latestDistributedBlockSlot,
           latestDistributedBlockHeight
-        FROM admDistributorState
+        FROM
+          admDistributorState
+        WHERE
+          profile = :p
         ",
-        Params::Empty)
+        params! {
+          "p" => profile,
+        })
         .unwrap();
     return state.unwrap();
+}
+
+pub fn fetch_dest_latest_distributed_slot(database: &mut PooledConn) -> (u64, u64) {
+  let state: Option<(u64, u64)> = database
+      .exec_first(
+          "
+      SELECT
+        latestDistributedBlockSlot,
+        latestDistributedBlockHeight
+      FROM admDistributorDestState
+      ",
+      Params::Empty)
+      .unwrap();
+  return state.unwrap();
 }
 
 pub fn fetch_slot_info(slot: u64, database: &mut PooledConn) -> Slot {
@@ -71,29 +90,34 @@ pub fn fetch_next_slot_infos(start_slot: u64, limit: u16, database: &mut PooledC
     return slots;
 }
 
-pub fn advance_distributor_state(
+pub fn advance_distributor_dest_state(
     transactions: &Vec<(Slot, String)>,
     keep_block_height: u64,
     database: &mut PooledConn
-) -> Result<()> {
+) -> Result<(usize, usize)> {
   let mut tx = database.start_transaction(TxOpts::default()).unwrap();
   let compression_level = 3; // standard level
 
-  for (slot, message) in transactions {
-    let compressed = zstd::encode_all(message.as_bytes(), compression_level).unwrap();
+  let mut total_data_size = 0usize;
+  let mut total_compressed_data_size = 0usize;
+  for (slot, data) in transactions {
+    let compressed = zstd::encode_all(data.as_bytes(), compression_level).unwrap();
 
     // verification
     let decoded = zstd::decode_all(compressed.as_slice()).unwrap();
-    let decoded_message = std::str::from_utf8(&decoded).unwrap();
-    assert_eq!(decoded_message, message);
+    let decoded_data = std::str::from_utf8(&decoded).unwrap();
+    assert_eq!(decoded_data, data);
+
+    total_data_size += data.len();
+    total_compressed_data_size += compressed.len();
 
     tx.exec_drop(
-        "INSERT INTO messages (slot, blockHeight, blockTime, message) VALUES (:s, :h, :t, :m)",
+        "INSERT INTO transactions (slot, blockHeight, blockTime, data) VALUES (:s, :h, :t, :d)",
         params! {
             "s" => slot.slot,
             "h" => slot.block_height,
             "t" => slot.block_time,
-            "m" => compressed,
+            "d" => compressed,
         },
     ).unwrap();  
   }
@@ -102,18 +126,40 @@ pub fn advance_distributor_state(
   let delete_block_height_threshold = latest_slot.block_height.saturating_sub(keep_block_height);
 
   tx.exec_drop(
-    "DELETE FROM messages WHERE blockHeight < :h",
+    "DELETE FROM transactions WHERE blockHeight < :h",
     params! {
         "h" => delete_block_height_threshold,
     },
   ).unwrap();
 
   tx.exec_drop(
-    "UPDATE admDistributorState SET latestDistributedBlockSlot = :s, latestDistributedBlockHeight = :h, latestDistributedBlockTime = :t",
+    "UPDATE admDistributorDestState SET latestDistributedBlockSlot = :s, latestDistributedBlockHeight = :h, latestDistributedBlockTime = :t",
     params! {
         "s" => latest_slot.slot,
         "h" => latest_slot.block_height,
         "t" => latest_slot.block_time,
+    },
+  ).unwrap();
+
+  tx.commit().unwrap();
+
+  return Ok((total_data_size, total_compressed_data_size));  
+}
+
+pub fn advance_distributor_state(
+  profile: &String,
+  next_latest_slot: &Slot,
+  database: &mut PooledConn
+) -> Result<()> {
+  let mut tx = database.start_transaction(TxOpts::default()).unwrap();
+
+  tx.exec_drop(
+    "UPDATE admDistributorState SET latestDistributedBlockSlot = :s, latestDistributedBlockHeight = :h, latestDistributedBlockTime = :t WHERE profile = :p",
+    params! {
+        "s" => next_latest_slot.slot,
+        "h" => next_latest_slot.block_height,
+        "t" => next_latest_slot.block_time,
+        "p" => profile,
     },
   ).unwrap();
 
