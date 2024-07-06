@@ -292,10 +292,13 @@ export async function fetchAndProcessBlock(database: Connection, solana: AxiosIn
 
   // insert into decimals
   if (introducedDecimals.size > 0) {
-    await database.batch(
-      "CALL addDecimalsIfNotExists(fromPubkeyBase58(?), ?)",
-      Array.from(introducedDecimals.entries())
-    );
+    // .batch does not support CALL command
+    for (const [mint, decimals] of introducedDecimals) {
+      await database.query(
+        "CALL addDecimalsIfNotExists(fromPubkeyBase58(?), ?)",
+        [mint, decimals]
+      );
+    }
   }
 
   // insert into txs
