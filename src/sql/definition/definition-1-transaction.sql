@@ -60,12 +60,6 @@ CREATE TABLE `balances` (
   PRIMARY KEY (`txid`,`account`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
-CREATE TABLE `decimals` (
-  `mint` int(11) unsigned NOT NULL,
-  `decimals` tinyint(11) unsigned NOT NULL,
-  PRIMARY KEY (`mint`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
-
 CREATE TABLE `ixsProgramDeploy` (
   `txid` bigint(11) unsigned NOT NULL,
   `order` tinyint(11) unsigned NOT NULL,
@@ -253,8 +247,6 @@ CREATE TABLE `ixsInitializePool` (
   `keyTokenProgram` int(11) unsigned NOT NULL,
   `keySystemProgram` int(11) unsigned NOT NULL,
   `keyRent` int(11) unsigned NOT NULL,
-  `decimalsTokenMintA` tinyint(11) unsigned NOT NULL,
-  `decimalsTokenMintB` tinyint(11) unsigned NOT NULL,
   PRIMARY KEY (`txid`,`order`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
@@ -303,7 +295,6 @@ CREATE TABLE `ixsInitializeReward` (
   `keyTokenProgram` int(11) unsigned NOT NULL,
   `keySystemProgram` int(11) unsigned NOT NULL,
   `keyRent` int(11) unsigned NOT NULL,
-  `decimalsRewardMint` tinyint(11) unsigned NOT NULL,
   PRIMARY KEY (`txid`,`order`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
@@ -796,8 +787,6 @@ CREATE TABLE `ixsInitializePoolV2` (
   `keyTokenProgramB` int(11) unsigned NOT NULL,
   `keySystemProgram` int(11) unsigned NOT NULL,
   `keyRent` int(11) unsigned NOT NULL,
-  `decimalsTokenMintA` tinyint(11) unsigned NOT NULL,
-  `decimalsTokenMintB` tinyint(11) unsigned NOT NULL,
   PRIMARY KEY (`txid`,`order`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
@@ -814,7 +803,6 @@ CREATE TABLE `ixsInitializeRewardV2` (
   `keyRewardTokenProgram` int(11) unsigned NOT NULL,
   `keySystemProgram` int(11) unsigned NOT NULL,
   `keyRent` int(11) unsigned NOT NULL,
-  `decimalsRewardMint` tinyint(11) unsigned NOT NULL,
   PRIMARY KEY (`txid`,`order`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
@@ -900,15 +888,6 @@ BEGIN
    END IF;
 END;;
 
-CREATE OR REPLACE PROCEDURE addDecimalsIfNotExists(mintPubkeyId int unsigned, tokenDecimals tinyint unsigned)
-BEGIN
-   DECLARE foundDecimals TINYINT;
-   SELECT decimals INTO foundDecimals FROM decimals WHERE mint = mintPubkeyId;
-   IF foundDecimals IS NULL THEN
-     INSERT INTO decimals (mint, decimals) VALUES (mintPubkeyId, tokenDecimals) ON DUPLICATE KEY UPDATE mint = mint;
-   END IF;
-END;;
-
 CREATE OR REPLACE PROCEDURE advanceCheckpoint()
 BEGIN
    DECLARE currentCheckpointBlockSlot BIGINT UNSIGNED;
@@ -955,13 +934,6 @@ BEGIN
    DECLARE pubkeyBase58 varchar(64) CHARSET utf8mb4 COLLATE utf8mb4_bin;
    SELECT pubkey INTO pubkeyBase58 FROM pubkeys WHERE id = pubkeyId;
    RETURN pubkeyBase58;
-END;;
-
-CREATE OR REPLACE FUNCTION resolveDecimals(mintPubkeyId int) RETURNS tinyint unsigned
-BEGIN
-   DECLARE foundDecimals TINYINT;
-   SELECT decimals INTO foundDecimals FROM decimals WHERE mint = mintPubkeyId;
-   RETURN foundDecimals;
 END;;
 
 CREATE OR REPLACE FUNCTION encodeU32(n int unsigned) RETURNS varbinary(4)
