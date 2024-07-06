@@ -86,6 +86,7 @@ export async function fetchAndProcessBlock(database: Connection, solana: AxiosIn
   // process transactions
 
   const touchedPubkeys = new Set<string>();
+  const introducedDecimals = new Map<string, number>();
   const processedTransactions: ProcessedTransaction[] = [];
   blockData.transactions.forEach((tx, orderInBlock) => {
     // drop failed transactions
@@ -138,6 +139,23 @@ export async function fetchAndProcessBlock(database: Connection, solana: AxiosIn
           break;
       }
       Object.values(ix.accounts).forEach((pubkey) => touchedPubkeys.add(pubkey));
+    });
+
+    // FOR decimals table
+    whirlpoolInstructions.forEach((ix) => {
+      switch (ix.name) {
+        case "initializePool":
+        case "initializePoolV2":
+          introducedDecimals.set(ix.accounts.tokenMintA, ix.decimals.tokenMintA);
+          introducedDecimals.set(ix.accounts.tokenMintB, ix.decimals.tokenMintB);
+          break;
+        case "initializeReward":
+        case "initializeRewardV2":
+          introducedDecimals.set(ix.accounts.rewardMint, ix.decimals.rewardMint);
+          break;
+        default:
+          break;
+      }
     });
 
     // FOR balances table
@@ -271,6 +289,14 @@ export async function fetchAndProcessBlock(database: Connection, solana: AxiosIn
   prepared.close();
 
   await database.beginTransaction();
+
+  // insert into decimals
+  if (introducedDecimals.size > 0) {
+    await database.batch(
+      "CALL addDecimalsIfNotExists(fromPubkeyBase58(?), ?)",
+      Array.from(introducedDecimals.entries())
+    );
+  }
 
   // insert into txs
   if (processedTransactions.length > 0) {
