@@ -7,7 +7,8 @@ import { DecodedWhirlpoolInstruction, RemainingAccounts, RemainingAccountsInfo, 
 
 const WHIRLPOOL_PUBKEY = "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc";
 
-const pubkeyLRUCache = new LRUCache<string, boolean>({ max: 10_000 });
+const pubkeyLRUCache = new LRUCache<string, boolean>({ max: 20_000 });
+const decimalsLRUCache = new LRUCache<string, boolean>({ max: 1_000 });
 
 export async function fetchAndProcessBlock(database: Connection, solana: AxiosInstance, slot: number) {
   const [processingSlot] = await database.query<Slot[]>('SELECT * FROM admQueuedSlots WHERE slot = ?', [slot]);
@@ -86,6 +87,7 @@ export async function fetchAndProcessBlock(database: Connection, solana: AxiosIn
   // process transactions
 
   const touchedPubkeys = new Set<string>();
+  const introducedDecimals = new Map<string, number>();
   const processedTransactions: ProcessedTransaction[] = [];
   blockData.transactions.forEach((tx, orderInBlock) => {
     // drop failed transactions
@@ -138,6 +140,23 @@ export async function fetchAndProcessBlock(database: Connection, solana: AxiosIn
           break;
       }
       Object.values(ix.accounts).forEach((pubkey) => touchedPubkeys.add(pubkey));
+    });
+
+    // FOR decimals table
+    whirlpoolInstructions.forEach((ix) => {
+      switch (ix.name) {
+        case "initializePool":
+        case "initializePoolV2":
+          introducedDecimals.set(ix.accounts.tokenMintA, ix.decimals.tokenMintA);
+          introducedDecimals.set(ix.accounts.tokenMintB, ix.decimals.tokenMintB);
+          break;
+        case "initializeReward":
+        case "initializeRewardV2":
+          introducedDecimals.set(ix.accounts.rewardMint, ix.decimals.rewardMint);
+          break;
+        default:
+          break;
+      }
     });
 
     // FOR balances table
@@ -262,13 +281,23 @@ export async function fetchAndProcessBlock(database: Connection, solana: AxiosIn
 
   // insert into pubkeys
   // anyway, we need to add pubkeys, so we do it outside of transaction for parallel processing
-  const prepared = await database.prepare("CALL addPubkeyIfNotExists(?)");
+  const preparedForPubkey = await database.prepare("CALL addPubkeyIfNotExists(?)");
   for (const pubkey of touchedPubkeys) {
     if (pubkeyLRUCache.get(pubkey)) continue;
-    await prepared.execute([pubkey]);
+    await preparedForPubkey.execute([pubkey]);
     pubkeyLRUCache.set(pubkey, true);
   }
-  prepared.close();
+  preparedForPubkey.close();
+
+  // insert into decimals
+  // anyway, we need to add decimals, so we do it outside of transaction for parallel processing
+  const preparedForDecimals = await database.prepare("CALL addDecimalsIfNotExists(fromPubkeyBase58(?), ?)");
+  for (const [mint, decimals] of introducedDecimals) {
+    if (decimalsLRUCache.get(mint)) continue;
+    await preparedForDecimals.execute([mint, decimals]);
+    decimalsLRUCache.set(mint, true);
+  }
+  preparedForDecimals.close();
 
   await database.beginTransaction();
 
@@ -329,22 +358,24 @@ function toTxID(slot: number, orderInBlock: number): bigint {
 
 
 async function insertInstruction(txid: bigint, order: number, ix: DecodedWhirlpoolInstruction, database: Connection) {
-  const buildSQL = (ixName: string, numData: number, numKey: number, numTransfer: number): string => {
+  const buildSQL = (ixName: string, numData: number, numKey: number, numTransfer: number, numDecimals: number): string => {
     const table = `ixs${ixName.charAt(0).toUpperCase() + ixName.slice(1)}`;
     const data = Array(numData).fill(", ?").join("");
     const key = Array(numKey).fill(", fromPubkeyBase58(?)").join("");
     const transfer = Array(numTransfer).fill(", ?").join("");
-    return `INSERT INTO ${table} VALUES (?, ?${data}${key}${transfer})`;
+    const decimals = Array(numDecimals).fill(", resolveDecimals(fromPubkeyBase58(?))").join("");
+    return `INSERT INTO ${table} VALUES (?, ?${data}${key}${transfer}${decimals})`;
   };
 
-  const buildV2SQL = (ixName: string, numData: number, numKey: number, numTransfer: number): string => {
+  const buildV2SQL = (ixName: string, numData: number, numKey: number, numTransfer: number, numDecimals: number): string => {
     const table = `ixs${ixName.charAt(0).toUpperCase() + ixName.slice(1)}`;
     const data = Array(numData).fill(", ?").join("");
     const key = Array(numKey).fill(", fromPubkeyBase58(?)").join("");
     const remainingAccounts = ", encodeU8U8TupleArray(?), encodeBase58PubkeyArray(?)";
     // amount, transfer fee config initialized, transfer fee bps, transfer fee max
     const transfer = Array(numTransfer).fill(", ?, ?, ?, ?").join("");
-    return `INSERT INTO ${table} VALUES (?, ?${data}${key}${remainingAccounts}${transfer})`;
+    const decimals = Array(numDecimals).fill(", resolveDecimals(fromPubkeyBase58(?))").join("");
+    return `INSERT INTO ${table} VALUES (?, ?${data}${key}${remainingAccounts}${transfer}${decimals})`;
   };
 
   const jsonifyRemainingAccountsInfo = (remainingAccountsInfo: RemainingAccountsInfo): string => {
@@ -365,7 +396,7 @@ async function insertInstruction(txid: bigint, order: number, ix: DecodedWhirlpo
 
   switch (ix.name) {
     case "swap":
-      return database.query(buildSQL(ix.name, 5, 11, 2), [
+      return database.query(buildSQL(ix.name, 5, 11, 2, 0), [
         txid,
         order,
         // data
@@ -389,9 +420,10 @@ async function insertInstruction(txid: bigint, order: number, ix: DecodedWhirlpo
         // transfer
         ix.transfers[0],
         ix.transfers[1],
+        // no decimals
       ]);
     case "twoHopSwap":
-      return database.query(buildSQL(ix.name, 7, 20, 4), [
+      return database.query(buildSQL(ix.name, 7, 20, 4, 0), [
         txid,
         order,
         // data
@@ -428,9 +460,10 @@ async function insertInstruction(txid: bigint, order: number, ix: DecodedWhirlpo
         ix.transfers[1],
         ix.transfers[2],
         ix.transfers[3],
+        // no decimals
       ]);
     case "openPosition":
-      return database.query(buildSQL(ix.name, 2, 10, 0), [
+      return database.query(buildSQL(ix.name, 2, 10, 0, 0), [
         txid,
         order,
         // data
@@ -448,9 +481,10 @@ async function insertInstruction(txid: bigint, order: number, ix: DecodedWhirlpo
         ix.accounts.rent,
         ix.accounts.associatedTokenProgram,
         // no transfer
+        // no decimals
       ]);
     case "openPositionWithMetadata":
-      return database.query(buildSQL(ix.name, 2, 13, 0), [
+      return database.query(buildSQL(ix.name, 2, 13, 0, 0), [
         txid,
         order,
         // data
@@ -471,9 +505,10 @@ async function insertInstruction(txid: bigint, order: number, ix: DecodedWhirlpo
         ix.accounts.metadataProgram,
         ix.accounts.metadataUpdateAuth,
         // no transfer
+        // no decimals
       ]);
     case "increaseLiquidity":
-      return database.query(buildSQL(ix.name, 3, 11, 2), [
+      return database.query(buildSQL(ix.name, 3, 11, 2, 0), [
         txid,
         order,
         // data
@@ -495,9 +530,10 @@ async function insertInstruction(txid: bigint, order: number, ix: DecodedWhirlpo
         // transfer
         ix.transfers[0],
         ix.transfers[1],
+        // no decimals
       ]);
     case "decreaseLiquidity":
-      return database.query(buildSQL(ix.name, 3, 11, 2), [
+      return database.query(buildSQL(ix.name, 3, 11, 2, 0), [
         txid,
         order,
         // data
@@ -519,9 +555,10 @@ async function insertInstruction(txid: bigint, order: number, ix: DecodedWhirlpo
         // transfer
         ix.transfers[0],
         ix.transfers[1],
+        // no decimals
       ]);
     case "updateFeesAndRewards":
-      return database.query(buildSQL(ix.name, 0, 4, 0), [
+      return database.query(buildSQL(ix.name, 0, 4, 0, 0), [
         txid,
         order,
         // no data
@@ -531,9 +568,10 @@ async function insertInstruction(txid: bigint, order: number, ix: DecodedWhirlpo
         ix.accounts.tickArrayLower,
         ix.accounts.tickArrayUpper,
         // no transfer
+        // no decimals
       ]);
     case "collectFees":
-      return database.query(buildSQL(ix.name, 0, 9, 2), [
+      return database.query(buildSQL(ix.name, 0, 9, 2, 0), [
         txid,
         order,
         // no data
@@ -550,9 +588,10 @@ async function insertInstruction(txid: bigint, order: number, ix: DecodedWhirlpo
         // transfer
         ix.transfers[0],
         ix.transfers[1],
+        // no decimals
       ]);
     case "collectReward":
-      return database.query(buildSQL(ix.name, 1, 7, 1), [
+      return database.query(buildSQL(ix.name, 1, 7, 1, 0), [
         txid,
         order,
         // data
@@ -567,9 +606,10 @@ async function insertInstruction(txid: bigint, order: number, ix: DecodedWhirlpo
         ix.accounts.tokenProgram,
         // transfer
         ix.transfers[0],
+        // no decimals
       ]);
     case "closePosition":
-      return database.query(buildSQL(ix.name, 0, 6, 0), [
+      return database.query(buildSQL(ix.name, 0, 6, 0, 0), [
         txid,
         order,
         // no data
@@ -581,9 +621,10 @@ async function insertInstruction(txid: bigint, order: number, ix: DecodedWhirlpo
         ix.accounts.positionTokenAccount,
         ix.accounts.tokenProgram,
         // no transfer
+        // no decimals
       ]);
     case "collectProtocolFees":
-      return database.query(buildSQL(ix.name, 0, 8, 2), [
+      return database.query(buildSQL(ix.name, 0, 8, 2, 0), [
         txid,
         order,
         // no data
@@ -599,9 +640,10 @@ async function insertInstruction(txid: bigint, order: number, ix: DecodedWhirlpo
         // transfer
         ix.transfers[0],
         ix.transfers[1],
+        // no decimals
       ]);
     case "adminIncreaseLiquidity":
-      return database.query(buildSQL(ix.name, 1, 3, 0), [
+      return database.query(buildSQL(ix.name, 1, 3, 0, 0), [
         txid,
         order,
         // data
@@ -611,9 +653,10 @@ async function insertInstruction(txid: bigint, order: number, ix: DecodedWhirlpo
         ix.accounts.whirlpool,
         ix.accounts.authority,
         // no transfer
+        // no decimals
       ]);
     case "initializeConfig":
-      return database.query(buildSQL(ix.name, 4 - 3, 3 + 3, 0), [
+      return database.query(buildSQL(ix.name, 4 - 3, 3 + 3, 0, 0), [
         txid,
         order,
         // data
@@ -627,9 +670,10 @@ async function insertInstruction(txid: bigint, order: number, ix: DecodedWhirlpo
         ix.accounts.funder,
         ix.accounts.systemProgram,
         // no transfer
+        // no decimals
       ]);
     case "initializeFeeTier":
-      return database.query(buildSQL(ix.name, 2, 5, 0), [
+      return database.query(buildSQL(ix.name, 2, 5, 0, 0), [
         txid,
         order,
         // data
@@ -642,9 +686,10 @@ async function insertInstruction(txid: bigint, order: number, ix: DecodedWhirlpo
         ix.accounts.feeAuthority,
         ix.accounts.systemProgram,
         // no transfer
+        // no decimals
       ]);
     case "initializePool":
-      return database.query(buildSQL(ix.name, 2, 11, 0), [
+      return database.query(buildSQL(ix.name, 2, 11, 0, 2), [
         txid,
         order,
         // data
@@ -663,9 +708,12 @@ async function insertInstruction(txid: bigint, order: number, ix: DecodedWhirlpo
         ix.accounts.systemProgram,
         ix.accounts.rent,
         // no transfer
+        // decimals
+        ix.accounts.tokenMintA,
+        ix.accounts.tokenMintB,
       ]);
     case "initializePositionBundle":
-      return database.query(buildSQL(ix.name, 0, 9, 0), [
+      return database.query(buildSQL(ix.name, 0, 9, 0, 0), [
         txid,
         order,
         // no data
@@ -680,9 +728,10 @@ async function insertInstruction(txid: bigint, order: number, ix: DecodedWhirlpo
         ix.accounts.rent,
         ix.accounts.associatedTokenProgram,
         // no transfer
+        // no decimals
       ]);
     case "initializePositionBundleWithMetadata":
-      return database.query(buildSQL(ix.name, 0, 12, 0), [
+      return database.query(buildSQL(ix.name, 0, 12, 0, 0), [
         txid,
         order,
         // no data
@@ -700,9 +749,10 @@ async function insertInstruction(txid: bigint, order: number, ix: DecodedWhirlpo
         ix.accounts.associatedTokenProgram,
         ix.accounts.metadataProgram,
         // no transfer
+        // no decimals
       ]);
     case "initializeReward":
-      return database.query(buildSQL(ix.name, 1, 8, 0), [
+      return database.query(buildSQL(ix.name, 1, 8, 0, 1), [
         txid,
         order,
         // data
@@ -717,9 +767,11 @@ async function insertInstruction(txid: bigint, order: number, ix: DecodedWhirlpo
         ix.accounts.systemProgram,
         ix.accounts.rent,
         // no transfer
+        // decimals
+        ix.accounts.rewardMint,
       ]);
     case "initializeTickArray":
-      return database.query(buildSQL(ix.name, 1, 4, 0), [
+      return database.query(buildSQL(ix.name, 1, 4, 0, 0), [
         txid,
         order,
         // data
@@ -730,9 +782,10 @@ async function insertInstruction(txid: bigint, order: number, ix: DecodedWhirlpo
         ix.accounts.tickArray,
         ix.accounts.systemProgram,
         // no transfer
+        // no decimals
       ]);
     case "deletePositionBundle":
-      return database.query(buildSQL(ix.name, 0, 6, 0), [
+      return database.query(buildSQL(ix.name, 0, 6, 0, 0), [
         txid,
         order,
         // no data
@@ -744,9 +797,10 @@ async function insertInstruction(txid: bigint, order: number, ix: DecodedWhirlpo
         ix.accounts.receiver,
         ix.accounts.tokenProgram,
         // no transfer
+        // no decimals
       ]);
     case "openBundledPosition":
-      return database.query(buildSQL(ix.name, 3, 8, 0), [
+      return database.query(buildSQL(ix.name, 3, 8, 0, 0), [
         txid,
         order,
         // data
@@ -763,9 +817,10 @@ async function insertInstruction(txid: bigint, order: number, ix: DecodedWhirlpo
         ix.accounts.systemProgram,
         ix.accounts.rent,
         // no transfer
+        // no decimals
       ]);
     case "closeBundledPosition":
-      return database.query(buildSQL(ix.name, 1, 5, 0), [
+      return database.query(buildSQL(ix.name, 1, 5, 0, 0), [
         txid,
         order,
         // data
@@ -777,9 +832,10 @@ async function insertInstruction(txid: bigint, order: number, ix: DecodedWhirlpo
         ix.accounts.positionBundleAuthority,
         ix.accounts.receiver,
         // no transfer
+        // no decimals
       ]);
     case "setCollectProtocolFeesAuthority":
-      return database.query(buildSQL(ix.name, 0, 3, 0), [
+      return database.query(buildSQL(ix.name, 0, 3, 0, 0), [
         txid,
         order,
         // no data
@@ -788,9 +844,10 @@ async function insertInstruction(txid: bigint, order: number, ix: DecodedWhirlpo
         ix.accounts.collectProtocolFeesAuthority,
         ix.accounts.newCollectProtocolFeesAuthority,
         // no transfer
+        // no decimals
       ]);
     case "setDefaultFeeRate":
-      return database.query(buildSQL(ix.name, 1, 3, 0), [
+      return database.query(buildSQL(ix.name, 1, 3, 0, 0), [
         txid,
         order,
         // data
@@ -800,9 +857,10 @@ async function insertInstruction(txid: bigint, order: number, ix: DecodedWhirlpo
         ix.accounts.feeTier,
         ix.accounts.feeAuthority,
         // no transfer
+        // no decimals
       ]);
     case "setDefaultProtocolFeeRate":
-      return database.query(buildSQL(ix.name, 1, 2, 0), [
+      return database.query(buildSQL(ix.name, 1, 2, 0, 0), [
         txid,
         order,
         // data
@@ -811,9 +869,10 @@ async function insertInstruction(txid: bigint, order: number, ix: DecodedWhirlpo
         ix.accounts.whirlpoolsConfig,
         ix.accounts.feeAuthority,
         // no transfer
+        // no decimals
       ]);
     case "setFeeAuthority":
-      return database.query(buildSQL(ix.name, 0, 3, 0), [
+      return database.query(buildSQL(ix.name, 0, 3, 0, 0), [
         txid,
         order,
         // no data
@@ -822,9 +881,10 @@ async function insertInstruction(txid: bigint, order: number, ix: DecodedWhirlpo
         ix.accounts.feeAuthority,
         ix.accounts.newFeeAuthority,
         // no transfer
+        // no decimals
       ]);
     case "setFeeRate":
-      return database.query(buildSQL(ix.name, 1, 3, 0), [
+      return database.query(buildSQL(ix.name, 1, 3, 0, 0), [
         txid,
         order,
         // data
@@ -834,9 +894,10 @@ async function insertInstruction(txid: bigint, order: number, ix: DecodedWhirlpo
         ix.accounts.whirlpool,
         ix.accounts.feeAuthority,
         // no transfer
+        // no decimals
       ]);
     case "setProtocolFeeRate":
-      return database.query(buildSQL(ix.name, 1, 3, 0), [
+      return database.query(buildSQL(ix.name, 1, 3, 0, 0), [
         txid,
         order,
         // data
@@ -846,9 +907,10 @@ async function insertInstruction(txid: bigint, order: number, ix: DecodedWhirlpo
         ix.accounts.whirlpool,
         ix.accounts.feeAuthority,
         // no transfer
+        // no decimals
       ]);
     case "setRewardAuthority":
-      return database.query(buildSQL(ix.name, 1, 3, 0), [
+      return database.query(buildSQL(ix.name, 1, 3, 0, 0), [
         txid,
         order,
         // data
@@ -858,9 +920,10 @@ async function insertInstruction(txid: bigint, order: number, ix: DecodedWhirlpo
         ix.accounts.rewardAuthority,
         ix.accounts.newRewardAuthority,
         // no transfer
+        // no decimals
       ]);
     case "setRewardAuthorityBySuperAuthority":
-      return database.query(buildSQL(ix.name, 1, 4, 0), [
+      return database.query(buildSQL(ix.name, 1, 4, 0, 0), [
         txid,
         order,
         // data
@@ -871,9 +934,10 @@ async function insertInstruction(txid: bigint, order: number, ix: DecodedWhirlpo
         ix.accounts.rewardEmissionsSuperAuthority,
         ix.accounts.newRewardAuthority,
         // no transfer
+        // no decimals
       ]);
     case "setRewardEmissions":
-      return database.query(buildSQL(ix.name, 2, 3, 0), [
+      return database.query(buildSQL(ix.name, 2, 3, 0, 0), [
         txid,
         order,
         // data
@@ -884,9 +948,10 @@ async function insertInstruction(txid: bigint, order: number, ix: DecodedWhirlpo
         ix.accounts.rewardAuthority,
         ix.accounts.rewardVault,
         // no transfer
+        // no decimals
       ]);
     case "setRewardEmissionsSuperAuthority":
-      return database.query(buildSQL(ix.name, 0, 3, 0), [
+      return database.query(buildSQL(ix.name, 0, 3, 0, 0), [
         txid,
         order,
         // no data
@@ -895,9 +960,10 @@ async function insertInstruction(txid: bigint, order: number, ix: DecodedWhirlpo
         ix.accounts.rewardEmissionsSuperAuthority,
         ix.accounts.newRewardEmissionsSuperAuthority,
         // no transfer
+        // no decimals
       ]);
     case "collectFeesV2":
-      return database.query(buildV2SQL(ix.name, 0, 13, 2), [
+      return database.query(buildV2SQL(ix.name, 0, 13, 2, 0), [
         txid,
         order,
         // no data
@@ -921,9 +987,10 @@ async function insertInstruction(txid: bigint, order: number, ix: DecodedWhirlpo
         // transfer
         ...flattenV2Transfer(ix.transfers[0]),
         ...flattenV2Transfer(ix.transfers[1]),
+        // no decimals
       ]);
     case "collectProtocolFeesV2":
-      return database.query(buildV2SQL(ix.name, 0, 12, 2), [
+      return database.query(buildV2SQL(ix.name, 0, 12, 2, 0), [
         txid,
         order,
         // no data
@@ -946,9 +1013,10 @@ async function insertInstruction(txid: bigint, order: number, ix: DecodedWhirlpo
         // transfer
         ...flattenV2Transfer(ix.transfers[0]),
         ...flattenV2Transfer(ix.transfers[1]),
+        // no decimals
       ]);
     case "collectRewardV2":
-      return database.query(buildV2SQL(ix.name, 1, 9, 1), [
+      return database.query(buildV2SQL(ix.name, 1, 9, 1, 0), [
         txid,
         order,
         // data
@@ -968,9 +1036,10 @@ async function insertInstruction(txid: bigint, order: number, ix: DecodedWhirlpo
         jsonifyRemainingAccounts(ix.remainingAccounts),
         // transfer
         ...flattenV2Transfer(ix.transfers[0]),
+        // no decimals
       ]);
     case "increaseLiquidityV2":
-      return database.query(buildV2SQL(ix.name, 3, 15, 2), [
+      return database.query(buildV2SQL(ix.name, 3, 15, 2, 0), [
         txid,
         order,
         // data
@@ -999,9 +1068,10 @@ async function insertInstruction(txid: bigint, order: number, ix: DecodedWhirlpo
         // transfer
         ...flattenV2Transfer(ix.transfers[0]),
         ...flattenV2Transfer(ix.transfers[1]),
+        // no decimals
       ]);
     case "decreaseLiquidityV2":
-      return database.query(buildV2SQL(ix.name, 3, 15, 2), [
+      return database.query(buildV2SQL(ix.name, 3, 15, 2, 0), [
         txid,
         order,
         // data
@@ -1030,9 +1100,10 @@ async function insertInstruction(txid: bigint, order: number, ix: DecodedWhirlpo
         // transfer
         ...flattenV2Transfer(ix.transfers[0]),
         ...flattenV2Transfer(ix.transfers[1]),
+        // no decimals
       ]);
     case "swapV2":
-      return database.query(buildV2SQL(ix.name, 5, 15, 2), [
+      return database.query(buildV2SQL(ix.name, 5, 15, 2, 0), [
         txid,
         order,
         // data
@@ -1063,9 +1134,10 @@ async function insertInstruction(txid: bigint, order: number, ix: DecodedWhirlpo
         // transfer
         ...flattenV2Transfer(ix.transfers[0]),
         ...flattenV2Transfer(ix.transfers[1]),
+        // no decimals
       ]);
     case "twoHopSwapV2":
-      return database.query(buildV2SQL(ix.name, 7, 24, 3), [
+      return database.query(buildV2SQL(ix.name, 7, 24, 3, 0), [
         txid,
         order,
         // data
@@ -1108,9 +1180,10 @@ async function insertInstruction(txid: bigint, order: number, ix: DecodedWhirlpo
         ...flattenV2Transfer(ix.transfers[0]),
         ...flattenV2Transfer(ix.transfers[1]),
         ...flattenV2Transfer(ix.transfers[2]),
+        // no decimals
       ]);
     case "initializePoolV2":
-      return database.query(buildSQL(ix.name, 2, 14, 0), [
+      return database.query(buildSQL(ix.name, 2, 14, 0, 2), [
         txid,
         order,
         // data
@@ -1132,9 +1205,12 @@ async function insertInstruction(txid: bigint, order: number, ix: DecodedWhirlpo
         ix.accounts.systemProgram,
         ix.accounts.rent,
         // no transfer
+        // decimals
+        ix.accounts.tokenMintA,
+        ix.accounts.tokenMintB,
       ]);
     case "initializeRewardV2":
-      return database.query(buildSQL(ix.name, 1, 9, 0), [
+      return database.query(buildSQL(ix.name, 1, 9, 0, 1), [
         txid,
         order,
         // data
@@ -1150,9 +1226,11 @@ async function insertInstruction(txid: bigint, order: number, ix: DecodedWhirlpo
         ix.accounts.systemProgram,
         ix.accounts.rent,
         // no transfer
+        // decimals
+        ix.accounts.rewardMint,
       ]);
     case "setRewardEmissionsV2":
-      return database.query(buildSQL(ix.name, 2, 3, 0), [
+      return database.query(buildSQL(ix.name, 2, 3, 0, 0), [
         txid,
         order,
         // data
@@ -1163,9 +1241,10 @@ async function insertInstruction(txid: bigint, order: number, ix: DecodedWhirlpo
         ix.accounts.rewardAuthority,
         ix.accounts.rewardVault,
         // no transfer
+        // no decimals
       ]);
     case "initializeConfigExtension":
-      return database.query(buildSQL(ix.name, 0, 5, 0), [
+      return database.query(buildSQL(ix.name, 0, 5, 0, 0), [
         txid,
         order,
         // no data
@@ -1176,9 +1255,10 @@ async function insertInstruction(txid: bigint, order: number, ix: DecodedWhirlpo
         ix.accounts.feeAuthority,
         ix.accounts.systemProgram,
         // no transfer
+        // no decimals
       ]);
     case "initializeTokenBadge":
-      return database.query(buildSQL(ix.name, 0, 7, 0), [
+      return database.query(buildSQL(ix.name, 0, 7, 0, 0), [
         txid,
         order,
         // no data
@@ -1191,9 +1271,10 @@ async function insertInstruction(txid: bigint, order: number, ix: DecodedWhirlpo
         ix.accounts.funder,
         ix.accounts.systemProgram,
         // no transfer
+        // no decimals
       ]);
     case "deleteTokenBadge":
-      return database.query(buildSQL(ix.name, 0, 6, 0), [
+      return database.query(buildSQL(ix.name, 0, 6, 0, 0), [
         txid,
         order,
         // no data
@@ -1205,9 +1286,10 @@ async function insertInstruction(txid: bigint, order: number, ix: DecodedWhirlpo
         ix.accounts.tokenBadge,
         ix.accounts.receiver,
         // no transfer
+        // no decimals
       ]);
     case "setConfigExtensionAuthority":
-      return database.query(buildSQL(ix.name, 0, 4, 0), [
+      return database.query(buildSQL(ix.name, 0, 4, 0, 0), [
         txid,
         order,
         // no data
@@ -1217,9 +1299,10 @@ async function insertInstruction(txid: bigint, order: number, ix: DecodedWhirlpo
         ix.accounts.configExtensionAuthority,
         ix.accounts.newConfigExtensionAuthority,
         // no transfer
+        // no decimals
       ]);
     case "setTokenBadgeAuthority":
-      return database.query(buildSQL(ix.name, 0, 4, 0), [
+      return database.query(buildSQL(ix.name, 0, 4, 0, 0), [
         txid,
         order,
         // no data
@@ -1229,6 +1312,7 @@ async function insertInstruction(txid: bigint, order: number, ix: DecodedWhirlpo
         ix.accounts.configExtensionAuthority,
         ix.accounts.newTokenBadgeAuthority,
         // no transfer
+        // no decimals
       ]);
     default:
       throw new Error("unknown whirlpool instruction name");
