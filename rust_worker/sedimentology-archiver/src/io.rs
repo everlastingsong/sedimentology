@@ -154,7 +154,7 @@ pub fn export_token(yyyymmdd_date: u32, file: &String, database: &mut PooledConn
         states.date,
         states.slot,
         slots.blockHeight,
-        slots.blockTime,
+        slots.blockTime
     FROM
         states LEFT OUTER JOIN slots ON states.slot = slots.slot
     WHERE
