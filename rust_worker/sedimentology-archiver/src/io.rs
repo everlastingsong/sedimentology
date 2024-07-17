@@ -3,17 +3,17 @@ use flate2::read::GzDecoder;
 use flate2::write::GzEncoder;
 use mysql::prelude::*;
 use mysql::*;
-use replay_engine::decoded_instructions::{from_json, DecodedInstruction};
+use replay_engine::decoded_instructions::DecodedInstruction;
 use serde_derive::{Deserialize, Serialize};
 use std::io::{Read, Write};
 use std::{
   fs::File,
-  io::{BufRead, BufReader, BufWriter, LineWriter},
+  io::{BufWriter, LineWriter},
 };
 
 use crate::date;
 
-use crate::schema::{TokenDecimals, Transaction, TransactionBalance, TransactionInstruction, WhirlpoolState, WhirlpoolStateAccount, WhirlpoolTransaction};
+use crate::schema::{TokenInfo, Transaction, TransactionBalance, TransactionInstruction, WhirlpoolState, WhirlpoolStateAccount, WhirlpoolToken, WhirlpoolTransaction};
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub struct Slot {
@@ -97,6 +97,8 @@ pub fn export_state(yyyymmdd_date: u32, file: &String, database: &mut PooledConn
     let (date, slot, block_height, block_time, program_compressed_data, account_compressed_data) =
         state.unwrap();
 
+    assert_eq!(date, yyyymmdd_date);
+
     // gzip decoded -> base64 decoded -> Vec<u8>
     let mut program_data_gz = GzDecoder::new(program_compressed_data.as_slice());
     let mut program_data_base64 = String::new();
@@ -125,49 +127,11 @@ pub fn export_state(yyyymmdd_date: u32, file: &String, database: &mut PooledConn
 
     accounts.sort_by(|a, b| a.pubkey.cmp(&b.pubkey));
 
-    // This process assumes that backfilling has been completed.
-    // More precisely, it requires that the initialization and reward initialization instructions
-    // for all Whirlpool accounts in the state have been indexed.
-    //
-    // [REASON]
-    // I wanted to avoid parsing whirlpool accounts and relying on whirlpools crates.
-    // I could parse the whirlpool account, extract the mint addresses,
-    // and resolve it with decimals fetched from the DB, but SQL is much simpler.
-    //
-    // If this process becomes too slow, just record the minimum value of txid to decimals table.
-    let max_txid = ((slot + 1) << 24) - 1;
-    let mut decimals: Vec<TokenDecimals> = database.exec_map(
-        "
-        SELECT
-            toPubkeyBase58(mints.mint),
-            resolveDecimals(mints.mint)
-        FROM (
-                  SELECT keyTokenMintA mint FROM ixsInitializePool WHERE txid <= :e
-            UNION SELECT keyTokenMintB mint FROM ixsInitializePool WHERE txid <= :e
-            UNION SELECT keyTokenMintA mint FROM ixsInitializePoolV2 WHERE txid <= :e
-            UNION SELECT keyTokenMintB mint FROM ixsInitializePoolV2 WHERE txid <= :e
-            UNION SELECT keyRewardMint mint FROM ixsInitializeReward WHERE txid <= :e
-            UNION SELECT keyRewardMint mint FROM ixsInitializeRewardV2 WHERE txid <= :e
-        ) mints
-        ",
-        params! {
-            "e" => max_txid,
-        },
-        |(mint, decimals)| TokenDecimals {
-            mint,
-            decimals,
-        },
-    )
-    .unwrap();
-
-    decimals.sort_by(|a, b| a.mint.cmp(&b.mint));
-
     let state: WhirlpoolState = WhirlpoolState {
         slot,
         block_height,
         block_time,
         accounts,
-        decimals,
         program_data,
     };
 
@@ -180,6 +144,84 @@ pub fn save_to_whirlpool_state_file(file_path: &String, state: &WhirlpoolState) 
   let encoder = GzEncoder::new(file, flate2::Compression::default());
   let writer = BufWriter::new(encoder);
   serde_json::to_writer(writer, state).unwrap();
+}
+
+pub fn export_token(yyyymmdd_date: u32, file: &String, database: &mut PooledConn) {
+  let state: Option<(u32, u64, u64, i64)> = database
+      .exec_first(
+          "
+    SELECT 
+        states.date,
+        states.slot,
+        slots.blockHeight,
+        slots.blockTime,
+    FROM
+        states LEFT OUTER JOIN slots ON states.slot = slots.slot
+    WHERE
+        states.date = :d
+    ",
+          params! {
+              "d" => yyyymmdd_date,
+          },
+      )
+      .unwrap();
+
+  let (date, slot, block_height, block_time) = state.unwrap();
+
+  assert_eq!(date, yyyymmdd_date);
+
+  // This process assumes that backfilling has been completed.
+  // More precisely, it requires that the initialization and reward initialization instructions
+  // for all Whirlpool accounts in the state have been indexed.
+  //
+  // [REASON]
+  // I wanted to avoid parsing whirlpool accounts and relying on whirlpools crates.
+  // I could parse the whirlpool account, extract the mint addresses,
+  // and resolve it with decimals fetched from the DB, but SQL is much simpler.
+  //
+  // If this process becomes too slow, just record the minimum value of txid to decimals table.
+  let max_txid = ((slot + 1) << 24) - 1;
+  let mut tokens: Vec<TokenInfo> = database.exec_map(
+      "
+      SELECT
+          toPubkeyBase58(mints.mint),
+          resolveDecimals(mints.mint)
+      FROM (
+                SELECT keyTokenMintA mint FROM ixsInitializePool WHERE txid <= :e
+          UNION SELECT keyTokenMintB mint FROM ixsInitializePool WHERE txid <= :e
+          UNION SELECT keyTokenMintA mint FROM ixsInitializePoolV2 WHERE txid <= :e
+          UNION SELECT keyTokenMintB mint FROM ixsInitializePoolV2 WHERE txid <= :e
+          UNION SELECT keyRewardMint mint FROM ixsInitializeReward WHERE txid <= :e
+          UNION SELECT keyRewardMint mint FROM ixsInitializeRewardV2 WHERE txid <= :e
+      ) mints
+      ",
+      params! {
+          "e" => max_txid,
+      },
+      |(mint, decimals)| TokenInfo {
+          mint,
+          decimals,
+      },
+  )
+  .unwrap();
+
+  tokens.sort_by(|a, b| a.mint.cmp(&b.mint));
+
+  let token = WhirlpoolToken {
+      slot,
+      block_height,
+      block_time,
+      tokens,
+  };
+
+  save_to_whirlpool_token_file(file, &token);
+}
+
+pub fn save_to_whirlpool_token_file(file_path: &String, token: &WhirlpoolToken) {
+  let file = File::create(file_path).unwrap();
+  let encoder = GzEncoder::new(file, flate2::Compression::default());
+  let writer = BufWriter::new(encoder);
+  serde_json::to_writer(writer, token).unwrap();
 }
 
 pub fn export_transaction(yyyymmdd_date: u32, file: &String, database: &mut PooledConn) {
