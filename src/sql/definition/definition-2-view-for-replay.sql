@@ -267,8 +267,8 @@ SELECT
         'keyTokenProgram', toPubkeyBase58(t.keyTokenProgram),
         'keySystemProgram', toPubkeyBase58(t.keySystemProgram),
         'keyRent', toPubkeyBase58(t.keyRent),
-        'decimalsTokenMintA', resolveDecimals(t.keyTokenMintA),
-        'decimalsTokenMintB', resolveDecimals(t.keyTokenMintB)
+        'decimalsTokenMintA', CAST(resolveDecimals(t.keyTokenMintA) AS UNSIGNED),
+        'decimalsTokenMintB', CAST(resolveDecimals(t.keyTokenMintB) AS UNSIGNED)
     ) AS "payload"
 FROM ixsInitializePool t;
 
@@ -326,7 +326,7 @@ SELECT
         'keyTokenProgram', toPubkeyBase58(t.keyTokenProgram),
         'keySystemProgram', toPubkeyBase58(t.keySystemProgram),
         'keyRent', toPubkeyBase58(t.keyRent),
-        'decimalsRewardMint', resolveDecimals(t.keyRewardMint)
+        'decimalsRewardMint', CAST(resolveDecimals(t.keyRewardMint) AS UNSIGNED)
     ) AS "payload"
 FROM ixsInitializeReward t;
 
@@ -922,8 +922,8 @@ SELECT
         'keyTokenProgramB', toPubkeyBase58(t.keyTokenProgramB),
         'keySystemProgram', toPubkeyBase58(t.keySystemProgram),
         'keyRent', toPubkeyBase58(t.keyRent),
-        'decimalsTokenMintA', resolveDecimals(t.keyTokenMintA),
-        'decimalsTokenMintB', resolveDecimals(t.keyTokenMintB)
+        'decimalsTokenMintA', CAST(resolveDecimals(t.keyTokenMintA) AS UNSIGNED),
+        'decimalsTokenMintB', CAST(resolveDecimals(t.keyTokenMintB) AS UNSIGNED)
     ) AS "payload"
 FROM ixsInitializePoolV2 t;
 
@@ -943,7 +943,7 @@ SELECT
         'keyRewardTokenProgram', toPubkeyBase58(t.keyRewardTokenProgram),
         'keySystemProgram', toPubkeyBase58(t.keySystemProgram),
         'keyRent', toPubkeyBase58(t.keyRent),
-        'decimalsRewardMint', resolveDecimals(t.keyRewardMint)
+        'decimalsRewardMint', CAST(resolveDecimals(t.keyRewardMint) AS UNSIGNED)
     ) AS "payload"
 FROM ixsInitializeRewardV2 t;
 
