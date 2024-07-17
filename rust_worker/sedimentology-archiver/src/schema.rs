@@ -29,6 +29,11 @@ A whirlpool state file (whirlpool-state-yyyymmdd.json.gz) is GZIP compressed JSO
     { pubkey: String(base58 encoding), data: String(base64 encoding) },
     ...
   ],
+  decimals: [
+    { mint: String(base58 encoding), decimals: u8 },
+    { mint: String(base58 encoding), decimals: u8 },
+    ...
+  ],
   programData: String(base64 encoding)
 }
 
@@ -41,6 +46,7 @@ pub struct WhirlpoolState {
   pub block_height: u64,
   pub block_time: i64,
   pub accounts: Vec<WhirlpoolStateAccount>,
+  pub decimals: Vec<TokenDecimals>,
   #[serde(deserialize_with = "deserialize_base64", serialize_with = "serialize_base64")]
   pub program_data: Vec<u8>,
 }
@@ -51,6 +57,13 @@ pub struct WhirlpoolStateAccount {
   pub pubkey: String,
   #[serde(deserialize_with = "deserialize_base64", serialize_with = "serialize_base64")]
   pub data: Vec<u8>,
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct TokenDecimals {
+  pub mint: String,
+  pub decimals: u8,
 }
 
 /*

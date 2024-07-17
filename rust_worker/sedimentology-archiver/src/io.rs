@@ -13,7 +13,7 @@ use std::{
 
 use crate::date;
 
-use crate::schema::{WhirlpoolState, WhirlpoolStateAccount, WhirlpoolTransaction, TransactionBalance, Transaction, TransactionInstruction};
+use crate::schema::{TokenDecimals, Transaction, TransactionBalance, TransactionInstruction, WhirlpoolState, WhirlpoolStateAccount, WhirlpoolTransaction};
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub struct Slot {
@@ -125,11 +125,47 @@ pub fn export_state(yyyymmdd_date: u32, file: &String, database: &mut PooledConn
 
     accounts.sort_by(|a, b| a.pubkey.cmp(&b.pubkey));
 
+    // This process assumes that backfilling has been completed.
+    // More precisely, it requires that the initialization and reward initialization instructions
+    // for all Whirlpool accounts in the state have been indexed.
+    //
+    // [REASON]
+    // I wanted to avoid parsing whirlpool accounts and relying on whirlpools crates.
+    // I could parse the whirlpool account, extract the mint addresses,
+    // and resolve it with decimals fetched from the DB, but SQL is much simpler.
+    //
+    // If this process becomes too slow, just record the minimum value of txid to decimals table.
+    let max_txid = ((slot + 1) << 24) - 1;
+    let decimals: Vec<TokenDecimals> = database.exec_map(
+        "
+        SELECT
+            toPubkeyBase58(mints.mint),
+            resolveDecimals(mints.mint)
+        FROM (
+                  SELECT keyTokenMintA mint FROM ixsInitializePool WHERE txid <= :e
+            UNION SELECT keyTokenMintB mint FROM ixsInitializePool WHERE txid <= :e
+            UNION SELECT keyTokenMintA mint FROM ixsInitializePoolV2 WHERE txid <= :e
+            UNION SELECT keyTokenMintB mint FROM ixsInitializePoolV2 WHERE txid <= :e
+            UNION SELECT keyRewardMint mint FROM ixsInitializeReward WHERE txid <= :e
+            UNION SELECT keyRewardMint mint FROM ixsInitializeRewardV2 WHERE txid <= :e
+        ) mints
+        ",
+        params! {
+            "e" => max_txid,
+        },
+        |(mint, decimals)| TokenDecimals {
+            mint,
+            decimals,
+        },
+    )
+    .unwrap();
+
     let state: WhirlpoolState = WhirlpoolState {
         slot,
         block_height,
         block_time,
         accounts,
+        decimals,
         program_data,
     };
 
