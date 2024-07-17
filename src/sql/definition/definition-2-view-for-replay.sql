@@ -266,7 +266,9 @@ SELECT
         'keyFeeTier', toPubkeyBase58(t.keyFeeTier),
         'keyTokenProgram', toPubkeyBase58(t.keyTokenProgram),
         'keySystemProgram', toPubkeyBase58(t.keySystemProgram),
-        'keyRent', toPubkeyBase58(t.keyRent)
+        'keyRent', toPubkeyBase58(t.keyRent),
+        'decimalsTokenMintA', resolveDecimals(t.keyTokenMintA),
+        'decimalsTokenMintB', resolveDecimals(t.keyTokenMintB)
     ) AS "payload"
 FROM ixsInitializePool t;
 
@@ -323,7 +325,8 @@ SELECT
         'keyRewardVault', toPubkeyBase58(t.keyRewardVault),
         'keyTokenProgram', toPubkeyBase58(t.keyTokenProgram),
         'keySystemProgram', toPubkeyBase58(t.keySystemProgram),
-        'keyRent', toPubkeyBase58(t.keyRent)
+        'keyRent', toPubkeyBase58(t.keyRent),
+        'decimalsRewardMint', resolveDecimals(t.keyRewardMint)
     ) AS "payload"
 FROM ixsInitializeReward t;
 
@@ -918,7 +921,9 @@ SELECT
         'keyTokenProgramA', toPubkeyBase58(t.keyTokenProgramA),
         'keyTokenProgramB', toPubkeyBase58(t.keyTokenProgramB),
         'keySystemProgram', toPubkeyBase58(t.keySystemProgram),
-        'keyRent', toPubkeyBase58(t.keyRent)
+        'keyRent', toPubkeyBase58(t.keyRent),
+        'decimalsTokenMintA', resolveDecimals(t.keyTokenMintA),
+        'decimalsTokenMintB', resolveDecimals(t.keyTokenMintB)
     ) AS "payload"
 FROM ixsInitializePoolV2 t;
 
@@ -937,7 +942,8 @@ SELECT
         'keyRewardVault', toPubkeyBase58(t.keyRewardVault),
         'keyRewardTokenProgram', toPubkeyBase58(t.keyRewardTokenProgram),
         'keySystemProgram', toPubkeyBase58(t.keySystemProgram),
-        'keyRent', toPubkeyBase58(t.keyRent)
+        'keyRent', toPubkeyBase58(t.keyRent),
+        'decimalsRewardMint', resolveDecimals(t.keyRewardMint)
     ) AS "payload"
 FROM ixsInitializeRewardV2 t;
 
