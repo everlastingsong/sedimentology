@@ -88,6 +88,11 @@ fn main() {
             println!("archiving {} ...", archiving_yyyymmdd_date);
 
             // export state & transaction to tmp file
+            println!("exporting token to tmp file ...");
+            let token_file_tmpfile = format!("{}/{}.token.tmp", tmpdir, profile);
+            io::export_token(archiving_yyyymmdd_date, &token_file_tmpfile, &mut conn);
+            let token_hash = command::sha256sum(&token_file_tmpfile);
+
             println!("exporting state to tmp file ...");
             let state_file_tmpfile = format!("{}/{}.state.tmp", tmpdir, profile);
             io::export_state(archiving_yyyymmdd_date, &state_file_tmpfile, &mut conn);
@@ -98,13 +103,18 @@ fn main() {
             io::export_transaction(archiving_yyyymmdd_date, &transaction_file_tmpfile, &mut conn);
             let transaction_hash = command::sha256sum(&transaction_file_tmpfile);
 
+            println!("token_hash = {}", token_hash);
             println!("state_hash = {}", state_hash);
             println!("transaction_hash = {}", transaction_hash);
 
             let yyyy = archiving_yyyymmdd_date.to_string().chars().take(4).collect::<String>();
             let mmdd = archiving_yyyymmdd_date.to_string().chars().skip(4).collect::<String>();
+            let token_file_dest = format!("{}/{}/{}/whirlpool-token-{}.json.gz", rclone_remote_path, yyyy, mmdd, archiving_yyyymmdd_date);
             let state_file_dest = format!("{}/{}/{}/whirlpool-state-{}.json.gz", rclone_remote_path, yyyy, mmdd, archiving_yyyymmdd_date);
             let transaction_file_dest = format!("{}/{}/{}/whirlpool-transaction-{}.jsonl.gz", rclone_remote_path, yyyy, mmdd, archiving_yyyymmdd_date);
+
+            println!("uploading {} to {} ...", token_file_tmpfile, token_file_dest);
+            command::rclone_copyto(&token_file_tmpfile, &token_file_dest);
 
             println!("uploading {} to {} ...", state_file_tmpfile, state_file_dest);
             command::rclone_copyto(&state_file_tmpfile, &state_file_dest);
@@ -112,8 +122,12 @@ fn main() {
             println!("uploading {} to {} ...", transaction_file_tmpfile, transaction_file_dest);
             command::rclone_copyto(&transaction_file_tmpfile, &transaction_file_dest);
 
+            let token_file_verify = format!("{}/{}.token.verify", tmpdir, profile);
             let state_file_verify = format!("{}/{}.state.verify", tmpdir, profile);
             let transaction_file_verify = format!("{}/{}.transaction.verify", tmpdir, profile);
+
+            println!("downloading {} to {} ...", token_file_dest, token_file_verify);
+            command::rclone_copyto(&token_file_dest, &token_file_verify);
 
             println!("downloading {} to {} ...", state_file_dest, state_file_verify);
             command::rclone_copyto(&state_file_dest, &state_file_verify);
@@ -122,14 +136,18 @@ fn main() {
             command::rclone_copyto(&transaction_file_dest, &transaction_file_verify);
 
             println!("verifying ...");
+            let token_verify_hash = command::sha256sum(&token_file_verify);
             let state_verify_hash = command::sha256sum(&state_file_verify);
             let transaction_verify_hash = command::sha256sum(&transaction_file_verify);
+            assert!(token_hash == token_verify_hash, "token_hash != token_verify_hash");
             assert!(state_hash == state_verify_hash, "state_hash != state_verify_hash");
             assert!(transaction_hash == transaction_verify_hash, "transaction_hash != transaction_verify_hash");
 
             // remove tmp & verify files
+            std::fs::remove_file(&token_file_tmpfile).unwrap();
             std::fs::remove_file(&state_file_tmpfile).unwrap();
             std::fs::remove_file(&transaction_file_tmpfile).unwrap();
+            std::fs::remove_file(&token_file_verify).unwrap();
             std::fs::remove_file(&state_file_verify).unwrap();
             std::fs::remove_file(&transaction_file_verify).unwrap();
 
