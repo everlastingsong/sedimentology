@@ -136,7 +136,7 @@ pub fn export_state(yyyymmdd_date: u32, file: &String, database: &mut PooledConn
     //
     // If this process becomes too slow, just record the minimum value of txid to decimals table.
     let max_txid = ((slot + 1) << 24) - 1;
-    let decimals: Vec<TokenDecimals> = database.exec_map(
+    let mut decimals: Vec<TokenDecimals> = database.exec_map(
         "
         SELECT
             toPubkeyBase58(mints.mint),
@@ -159,6 +159,8 @@ pub fn export_state(yyyymmdd_date: u32, file: &String, database: &mut PooledConn
         },
     )
     .unwrap();
+
+    decimals.sort_by(|a, b| a.mint.cmp(&b.mint));
 
     let state: WhirlpoolState = WhirlpoolState {
         slot,
