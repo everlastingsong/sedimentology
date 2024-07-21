@@ -1,4 +1,5 @@
 #!/bin/bash
 
  ts-node load_program_deploy.ts 4502947782197890 0 5Xpk6Uo412FK35oeQUQ3Suc6ZMmR9Wo48LvNfk3B3FQWMEuZfbGY5NfCL9cVPnY7pqGsWkrPzSBU2XszTpHBVZyS 23zF9Azpe9CN4iPeTsQndD1mQpcb5Gz1qFREL5gPTZvG whirlpool-20240528-268396603.so 
+ ts-node load_program_deploy.ts 4674915856810879 0 3ZsCxhskdH45FYbpgfGgVzNqsAFwaK2E4mZMFAK3bexuz6vVwH7W5DsnFDxRhvXUABkKFwCPmk3CrGtiodo2yoXm 23zF9Azpe9CN4iPeTsQndD1mQpcb5Gz1qFREL5gPTZvG whirlpool-20240720-278646699.so
  
