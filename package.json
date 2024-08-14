@@ -18,7 +18,7 @@
   "dependencies": {
     "@bull-board/express": "^5.8.3",
     "@solana/web3.js": "^1.90.0",
-    "@yugure-orca/whirlpool-tx-decoder": "0.2.2",
+    "@yugure-orca/whirlpool-tx-decoder": "0.2.3",
     "axios": "^1.5.0",
     "bullmq": "^4.11.0",
     "commander": "^11.0.0",
