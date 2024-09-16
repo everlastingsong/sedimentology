@@ -7,6 +7,10 @@ import { DecodedWhirlpoolInstruction, RemainingAccounts, RemainingAccountsInfo, 
 
 const WHIRLPOOL_PUBKEY = "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc";
 
+// Program data account is PDA based on program address, so it is constant for each program
+const WHIRLPOOL_PROGRAM_DATA_PUBKEY = "CtXfPzz36dH5Ws4UYKZvrQ1Xqzn42ecDW6y8NKuiN8nD";
+const WHIRLPOOL_PROGRAM_DATA_ACCOUNT_SIZE = 1405485;
+
 const pubkeyLRUCache = new LRUCache<string, boolean>({ max: 10_000 });
 
 export async function fetchAndProcessBlock(database: Connection, solana: AxiosInstance, slot: number) {
@@ -88,9 +92,11 @@ export async function fetchAndProcessBlock(database: Connection, solana: AxiosIn
   const touchedPubkeys = new Set<string>();
   const introducedDecimals = new Map<string, number>();
   const processedTransactions: ProcessedTransaction[] = [];
-  blockData.transactions.forEach((tx, orderInBlock) => {
+  for (let orderInBlock = 0; orderInBlock < blockData.transactions.length; orderInBlock++) {
+    const tx = blockData.transactions[orderInBlock];
+
     // drop failed transactions
-    if (tx.meta.err !== null) return;
+    if (tx.meta.err !== null) continue;
 
     const staticPubkeys = tx.transaction.message.accountKeys;
     const writablePubkeys = tx.meta.loadedAddresses.writable;
@@ -99,18 +105,28 @@ export async function fetchAndProcessBlock(database: Connection, solana: AxiosIn
     const mentionWhirlpoolProgram = allPubkeys.includes(WHIRLPOOL_PUBKEY);
 
     // drop transactions that did not mention whirlpool pubkey
-    if (!mentionWhirlpoolProgram) return;
+    if (!mentionWhirlpoolProgram) continue;
 
     // innerInstructions is required to extract all executed whirlpool instructions via CPI
     // broken block does not have innerInstructions (null), it should be [] if no inner instructions exist
     invariant(tx.meta.innerInstructions !== null, "innerInstructions must exist");
 
-    const whirlpoolInstructions = WhirlpoolTransactionDecoder.decode({ result: tx }, WHIRLPOOL_PUBKEY);
-    
-    // drop transactions that did not execute whirlpool instructions
-    if (whirlpoolInstructions.length === 0) return;
+    const {
+      decodedInstructions: whirlpoolInstructions,
+      programDeployDetected
+    } = WhirlpoolTransactionDecoder.decodeWithProgramDeployDetection({ result: tx }, WHIRLPOOL_PUBKEY);
+        
+    // drop transactions that did not execute whirlpool instructions and did not do program deploy
+    if (whirlpoolInstructions.length === 0 && !programDeployDetected) continue;
 
-    // now we are sure that this transaction executed at least one whirlpool instruction
+    // now we are sure that this transaction executed at least one whirlpool instruction or program deploy
+
+    // for simplicity, we assume that program upgrade is never executed simultaneously with instruction execution
+    let newProgramData: undefined | Buffer = undefined;
+    if (programDeployDetected) {
+      invariant(whirlpoolInstructions.length === 0, "whirlpoolInstructions must be empty when programDeployDetected");
+      newProgramData = await fetchProgramData(solana, slot);
+    }
 
     // FOR txs table
     const txid = toTxID(slot, orderInBlock);
@@ -273,8 +289,9 @@ export async function fetchAndProcessBlock(database: Connection, solana: AxiosIn
       payer,
       balances,
       whirlpoolInstructions,
+      newProgramData,
     });
-  });
+  }
 
   // save processed transactions to database
 
@@ -323,6 +340,14 @@ export async function fetchAndProcessBlock(database: Connection, solana: AxiosIn
     await Promise.all(tx.whirlpoolInstructions.map((ix: DecodedWhirlpoolInstruction, order) => {
       return insertInstruction(tx.txid, order, ix, database);
     }));
+
+    // insert into ixsProgramDeploy
+    if (tx.newProgramData) {
+      invariant(tx.whirlpoolInstructions.length === 0, "whirlpoolInstructions must be empty when programDeployDetected");
+      const order = 0;
+
+      await insertProgramDeployInstruction(tx.txid, order, tx.newProgramData, database);
+    }
   }
 
   // update slots
@@ -347,6 +372,7 @@ type ProcessedTransaction = {
   payer: string;
   balances: { account: string, pre: string, post: string }[];
   whirlpoolInstructions: DecodedWhirlpoolInstruction[];
+  newProgramData: undefined | Buffer;
 };
 
 
@@ -1262,4 +1288,68 @@ async function insertInstruction(txid: bigint, order: number, ix: DecodedWhirlpo
     default:
       throw new Error("unknown whirlpool instruction name");
   }
+}
+
+async function insertProgramDeployInstruction(txid: bigint, order: number, programData: Buffer, database: Connection) {
+  await database.query(
+    //
+    // DO NOT USE TO_BASE64 FUNCTION ON MARIADB (it insert new line every 76 chars)
+    //
+    "INSERT INTO ixsProgramDeploy VALUES(?, ?, ?)",
+    [txid, order, programData.toString("base64")]
+  );
+}
+
+async function fetchProgramData(
+  solana: AxiosInstance,
+  slot: number,
+): Promise<Buffer> {
+  // getAccountInfo
+  // see: https://solana.com/docs/rpc/http/getaccountinfo
+  const response = await solana.request({
+    data: {
+      jsonrpc: "2.0",
+      id: 1,
+      method: "getAccountInfo",
+      params: [
+        WHIRLPOOL_PROGRAM_DATA_PUBKEY,
+        {
+          commitment: "finalized",
+          encoding: "base64",
+        },
+      ],
+    },
+  });
+
+  if (response.data?.error) {
+    throw new Error(`getAccountInfo(${WHIRLPOOL_PROGRAM_DATA_PUBKEY}) failed: ${JSON.stringify(response.data.error)}`);
+  }
+  invariant(response.data?.result, "result must be truthy");
+  invariant(response.data.result.value?.data, "data must exist");
+  invariant(response.data.result.value.data.length === 2, "data length must be 2");
+  invariant(response.data.result.value.data[1] === "base64", "data[1] must be base64");
+
+  // https://github.com/solana-labs/solana/blob/27eff8408b7223bb3c4ab70523f8a8dca3ca6645/sdk/program/src/bpf_loader_upgradeable.rs#L45
+  // 45 byte header + program data
+  // header:
+  //   - 4  bytes: 0x03, 0x00, 0x00, 0x00 ("ProgramData" enum discriminator)
+  //   - 8  bytes: last modified slot (u64)
+  //   - 33 bytes: Option<Pubkey> (upgrade authority)
+  const dataBuffer = Buffer.from(response.data.result.value.data[0], "base64");
+  invariant(dataBuffer.length === WHIRLPOOL_PROGRAM_DATA_ACCOUNT_SIZE, `data length must be ${WHIRLPOOL_PROGRAM_DATA_ACCOUNT_SIZE}`);
+  const accountDiscriminator = dataBuffer.readUInt32LE(0);
+  invariant(accountDiscriminator === 3, "account discriminator must be 3 (ProgramData)");
+
+  // This constraint is NOT satisfied if a past deployment has already been overwritten.
+  // In this case, it is necessary to analyze the Write instruction to recovery the past state.
+  // This constraint is effective when parsing blocks in semi-real-time.
+  // The program must wait 750 slots (DEPLOYMENT_COOLDOWN_IN_SLOTS) until the next upgrade,
+  // so it is not necessary to consider the possibility of being upgraded again in a very short time.
+  const lastModifiedSlot = dataBuffer.readBigUInt64LE(4);
+  if (slot !== Number(lastModifiedSlot)) {
+    throw new Error(`lastModifiedSlot mismatch: ${slot} !== ${lastModifiedSlot}`);
+  }
+
+  const programDataBuffer = dataBuffer.slice(45);
+  return programDataBuffer;
 }
