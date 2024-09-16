@@ -107,62 +107,73 @@ console.log("transactions", blockData.transactions.length);
         `signature: ${tx.transaction.signatures[0]}`,
       );
 
-      // Program data account is PDA based on program address, so it is constant for each program
-      const WHIRLPOOL_PROGRAM_DATA_PUBKEY = "CtXfPzz36dH5Ws4UYKZvrQ1Xqzn42ecDW6y8NKuiN8nD";
-      const WHIRLPOOL_PROGRAM_DATA_ACCOUNT_SIZE = 1405485;
-
-      // getAccountInfo
-      // see: https://solana.com/docs/rpc/http/getaccountinfo
-      const response = await solana.request({
-        data: {
-          jsonrpc: "2.0",
-          id: 1,
-          method: "getAccountInfo",
-          params: [
-            WHIRLPOOL_PROGRAM_DATA_PUBKEY,
-            {
-              commitment: "finalized",
-              encoding: "base64",
-            },
-          ],
-        },
-      });
-
-      if (response.data?.error) {
-        throw new Error(`getAccountInfo(${WHIRLPOOL_PROGRAM_DATA_PUBKEY}) failed: ${JSON.stringify(response.data.error)}`);
-      }
-      invariant(response.data?.result, "result must be truthy");
-      invariant(response.data.result.value?.data, "data must exist");
-      invariant(response.data.result.value.data.length === 2, "data length must be 2");
-      invariant(response.data.result.value.data[1] === "base64", "data[1] must be base64");
-
-
-      // https://github.com/solana-labs/solana/blob/27eff8408b7223bb3c4ab70523f8a8dca3ca6645/sdk/program/src/bpf_loader_upgradeable.rs#L45
-      // 45 byte header + program data
-      // header:
-      //   - 4  bytes: 0x03, 0x00, 0x00, 0x00 ("ProgramData" enum discriminator)
-      //   - 8  bytes: last modified slot (u64)
-      //   - 33 bytes: Option<Pubkey> (upgrade authority)
-      const dataBuffer = Buffer.from(response.data.result.value.data[0], "base64");
-      invariant(dataBuffer.length === WHIRLPOOL_PROGRAM_DATA_ACCOUNT_SIZE, `data length must be ${WHIRLPOOL_PROGRAM_DATA_ACCOUNT_SIZE}`);
-      const accountDiscriminator = dataBuffer.readUInt32LE(0);
-      invariant(accountDiscriminator === 3, "account discriminator must be 3 (ProgramData)");
-
-      // This constraint is NOT satisfied if a past deployment has already been overwritten.
-      // In this case, it is necessary to analyze the Write instruction to recovery the past state.
-      // This constraint is effective when parsing blocks in semi-real-time.
-      // The program must wait 750 slots (DEPLOYMENT_COOLDOWN_IN_SLOTS) until the next upgrade,
-      // so it is not necessary to consider the possibility of being upgraded again in a very short time.
-      const lastModifiedSlot = dataBuffer.readBigUInt64LE(4);
-      invariant(slot === Number(lastModifiedSlot), "last modified slot must be equal to the slot");
-
-      const programDataBuffer = dataBuffer.slice(45);
+      const programDataBuffer = await getProgramDataBuffer(solana, slot);
       console.log("programDataBuffer", programDataBuffer.length);
     }
 
   }
 
   console.log("transaction count", blockData.transactions.length);
+}
+
+// Program data account is PDA based on program address, so it is constant for each program
+const WHIRLPOOL_PROGRAM_DATA_PUBKEY = "CtXfPzz36dH5Ws4UYKZvrQ1Xqzn42ecDW6y8NKuiN8nD";
+const WHIRLPOOL_PROGRAM_DATA_ACCOUNT_SIZE = 1405485;
+
+async function getProgramDataBuffer(
+  solana: AxiosInstance,
+  slot: number,
+): Promise<Buffer> {
+  // getAccountInfo
+  // see: https://solana.com/docs/rpc/http/getaccountinfo
+  const response = await solana.request({
+    data: {
+      jsonrpc: "2.0",
+      id: 1,
+      method: "getAccountInfo",
+      params: [
+        WHIRLPOOL_PROGRAM_DATA_PUBKEY,
+        {
+          commitment: "finalized",
+          encoding: "base64",
+        },
+      ],
+    },
+  });
+
+  if (response.data?.error) {
+    throw new Error(`getAccountInfo(${WHIRLPOOL_PROGRAM_DATA_PUBKEY}) failed: ${JSON.stringify(response.data.error)}`);
+  }
+  invariant(response.data?.result, "result must be truthy");
+  invariant(response.data.result.value?.data, "data must exist");
+  invariant(response.data.result.value.data.length === 2, "data length must be 2");
+  invariant(response.data.result.value.data[1] === "base64", "data[1] must be base64");
+
+  // https://github.com/solana-labs/solana/blob/27eff8408b7223bb3c4ab70523f8a8dca3ca6645/sdk/program/src/bpf_loader_upgradeable.rs#L45
+  // 45 byte header + program data
+  // header:
+  //   - 4  bytes: 0x03, 0x00, 0x00, 0x00 ("ProgramData" enum discriminator)
+  //   - 8  bytes: last modified slot (u64)
+  //   - 33 bytes: Option<Pubkey> (upgrade authority)
+  const dataBuffer = Buffer.from(response.data.result.value.data[0], "base64");
+  invariant(dataBuffer.length === WHIRLPOOL_PROGRAM_DATA_ACCOUNT_SIZE, `data length must be ${WHIRLPOOL_PROGRAM_DATA_ACCOUNT_SIZE}`);
+  const accountDiscriminator = dataBuffer.readUInt32LE(0);
+  invariant(accountDiscriminator === 3, "account discriminator must be 3 (ProgramData)");
+
+  // This constraint is NOT satisfied if a past deployment has already been overwritten.
+  // In this case, it is necessary to analyze the Write instruction to recovery the past state.
+  // This constraint is effective when parsing blocks in semi-real-time.
+  // The program must wait 750 slots (DEPLOYMENT_COOLDOWN_IN_SLOTS) until the next upgrade,
+  // so it is not necessary to consider the possibility of being upgraded again in a very short time.
+  const lastModifiedSlot = dataBuffer.readBigUInt64LE(4);
+  if (slot !== Number(lastModifiedSlot)) {
+    // This block continues to output errors when it reaches this state, so delay
+    await new Promise((resolve) => setTimeout(resolve, 10 * 1000));
+    throw new Error(`program deploy detected, but lastModifiedSlot mismatch: ${slot} !== ${lastModifiedSlot}`);
+  }
+
+  const programDataBuffer = dataBuffer.slice(45);
+  return programDataBuffer;
 }
 
 async function main() {
