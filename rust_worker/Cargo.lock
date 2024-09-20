@@ -4189,8 +4189,8 @@ dependencies = [
 
 [[package]]
 name = "replay-engine"
-version = "0.1.4"
-source = "git+https://github.com/orca-so/whirlpool-tx-replayer?tag=v0.1.4#23cd2b18864a9fb3177d7c27e0b72848fd7c6e7a"
+version = "0.1.5"
+source = "git+https://github.com/orca-so/whirlpool-tx-replayer?tag=v0.1.5#6f673eda30818c842842555c55c99dcf28e48026"
 dependencies = [
  "anchor-client",
  "anchor-lang",
