@@ -338,6 +338,8 @@ pub fn export_transaction(yyyymmdd_date: u32, file: &String, database: &mut Pool
           UNION ALL SELECT * FROM vwJsonIxsDeleteTokenBadge WHERE txid BETWEEN :s and :e
           UNION ALL SELECT * FROM vwJsonIxsSetConfigExtensionAuthority WHERE txid BETWEEN :s and :e
           UNION ALL SELECT * FROM vwJsonIxsSetTokenBadgeAuthority WHERE txid BETWEEN :s and :e
+          UNION ALL SELECT * FROM vwJsonIxsOpenPositionWithTokenExtensions WHERE txid BETWEEN :s and :e
+          UNION ALL SELECT * FROM vwJsonIxsClosePositionWithTokenExtensions WHERE txid BETWEEN :s and :e
           ",
           // no ORDER BY clause, sort at the client side
       params! {

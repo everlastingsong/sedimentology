@@ -256,6 +256,8 @@ export async function fetchAndProcessBlock(database: Connection, solana: AxiosIn
         case "deleteTokenBadge":
         case "setConfigExtensionAuthority":
         case "setTokenBadgeAuthority":
+        case "openPositionWithTokenExtensions":
+        case "closePositionWithTokenExtensions":
           // This instruction does not affect the token balance.
           break;
         default:
@@ -1283,6 +1285,41 @@ async function insertInstruction(txid: bigint, order: number, ix: DecodedWhirlpo
         ix.accounts.whirlpoolsConfigExtension,
         ix.accounts.configExtensionAuthority,
         ix.accounts.newTokenBadgeAuthority,
+        // no transfer
+      ]);
+    case "openPositionWithTokenExtensions":
+      return database.query(buildSQL(ix.name, 3, 10, 0), [
+        txid,
+        order,
+        // data
+        ix.data.tickLowerIndex,
+        ix.data.tickUpperIndex,
+        ix.data.withTokenMetadataExtension,
+        // key
+        ix.accounts.funder,
+        ix.accounts.owner,
+        ix.accounts.position,
+        ix.accounts.positionMint,
+        ix.accounts.positionTokenAccount,
+        ix.accounts.whirlpool,
+        ix.accounts.token2022Program,
+        ix.accounts.systemProgram,
+        ix.accounts.associatedTokenProgram,
+        ix.accounts.metadataUpdateAuth,
+        // no transfer
+      ]);
+    case "closePositionWithTokenExtensions":
+      return database.query(buildSQL(ix.name, 0, 6, 0), [
+        txid,
+        order,
+        // no data
+        // key
+        ix.accounts.positionAuthority,
+        ix.accounts.receiver,
+        ix.accounts.position,
+        ix.accounts.positionMint,
+        ix.accounts.positionTokenAccount,
+        ix.accounts.token2022Program,
         // no transfer
       ]);
     default:

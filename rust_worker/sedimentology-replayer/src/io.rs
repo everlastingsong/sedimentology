@@ -200,6 +200,8 @@ pub fn fetch_instructions_in_slot(slot: u64, database: &mut PooledConn) -> Vec<I
           UNION ALL SELECT * FROM vwJsonIxsDeleteTokenBadge WHERE txid BETWEEN :s and :e
           UNION ALL SELECT * FROM vwJsonIxsSetConfigExtensionAuthority WHERE txid BETWEEN :s and :e
           UNION ALL SELECT * FROM vwJsonIxsSetTokenBadgeAuthority WHERE txid BETWEEN :s and :e
+          UNION ALL SELECT * FROM vwJsonIxsOpenPositionWithTokenExtensions WHERE txid BETWEEN :s and :e
+          UNION ALL SELECT * FROM vwJsonIxsClosePositionWithTokenExtensions WHERE txid BETWEEN :s and :e
           ",
           // no ORDER BY clause, sort at the client side
       params! {

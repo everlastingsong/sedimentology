@@ -879,6 +879,37 @@ CREATE TABLE `ixsSetTokenBadgeAuthority` (
   PRIMARY KEY (`txid`,`order`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
+CREATE TABLE `ixsOpenPositionWithTokenExtensions` (
+  `txid` bigint(11) unsigned NOT NULL,
+  `order` tinyint(11) unsigned NOT NULL,
+  `dataTickLowerIndex` int(11) NOT NULL COMMENT 'i32',
+  `dataTickUpperIndex` int(11) NOT NULL COMMENT 'i32',
+  `dataWithTokenMetadataExtension` tinyint(1) unsigned NOT NULL COMMENT 'boolean',
+  `keyFunder` int(11) unsigned NOT NULL,
+  `keyOwner` int(11) unsigned NOT NULL,
+  `keyPosition` int(11) unsigned NOT NULL,
+  `keyPositionMint` int(11) unsigned NOT NULL,
+  `keyPositionTokenAccount` int(11) unsigned NOT NULL,
+  `keyWhirlpool` int(11) unsigned NOT NULL,
+  `keyToken2022Program` int(11) unsigned NOT NULL,
+  `keySystemProgram` int(11) unsigned NOT NULL,
+  `keyAssociatedTokenProgram` int(11) unsigned NOT NULL,
+  `keyMetadataUpdateAuth` int(11) unsigned NOT NULL,
+  PRIMARY KEY (`txid`,`order`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+
+CREATE TABLE `ixsClosePositionWithTokenExtensions` (
+  `txid` bigint(11) unsigned NOT NULL,
+  `order` tinyint(11) unsigned NOT NULL,
+  `keyPositionAuthority` int(11) unsigned NOT NULL,
+  `keyReceiver` int(11) unsigned NOT NULL,
+  `keyPosition` int(11) unsigned NOT NULL,
+  `keyPositionMint` int(11) unsigned NOT NULL,
+  `keyPositionTokenAccount` int(11) unsigned NOT NULL,
+  `keyToken2022Program` int(11) unsigned NOT NULL,
+  PRIMARY KEY (`txid`,`order`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+
 
 --
 -- PROCEDURE
