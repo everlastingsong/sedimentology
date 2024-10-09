@@ -12,7 +12,7 @@ version = "0.0.1"
 edition = "2021"
 
 [workspace.dependencies]
+replay-engine = { git = "https://github.com/orca-so/whirlpool-tx-replayer", tag = "v0.1.6", package = "replay-engine" }
+
 mysql = { version = "24.0.0", default-features = false, features = ["default-rustls"] }
 clap = { version = "4.4.11", features = ["derive"] }
-
-

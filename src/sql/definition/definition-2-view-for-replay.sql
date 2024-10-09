@@ -1032,6 +1032,43 @@ SELECT
     ) AS "payload"
 FROM ixsSetTokenBadgeAuthority t;
 
+CREATE OR REPLACE VIEW vwJsonIxsOpenPositionWithTokenExtensions AS
+SELECT
+    t.txid,
+    t.order,
+    "openPositionWithTokenExtensions" AS "ix",
+    JSON_OBJECT(
+        'dataTickLowerIndex', t.dataTickLowerIndex,
+        'dataTickUpperIndex', t.dataTickUpperIndex,
+        'dataWithTokenMetadataExtension', t.dataWithTokenMetadataExtension,
+        'keyFunder', toPubkeyBase58(t.keyFunder),
+        'keyOwner', toPubkeyBase58(t.keyOwner),
+        'keyPosition', toPubkeyBase58(t.keyPosition),
+        'keyPositionMint', toPubkeyBase58(t.keyPositionMint),
+        'keyPositionTokenAccount', toPubkeyBase58(t.keyPositionTokenAccount),
+        'keyWhirlpool', toPubkeyBase58(t.keyWhirlpool),
+        'keyToken2022Program', toPubkeyBase58(t.keyToken2022Program),
+        'keySystemProgram', toPubkeyBase58(t.keySystemProgram),
+        'keyAssociatedTokenProgram', toPubkeyBase58(t.keyAssociatedTokenProgram),
+        'keyMetadataUpdateAuth', toPubkeyBase58(t.keyMetadataUpdateAuth)
+    ) AS "payload"
+FROM ixsOpenPositionWithTokenExtensions t;
+
+CREATE OR REPLACE VIEW vwJsonIxsClosePositionWithTokenExtensions AS
+SELECT
+    t.txid,
+    t.order,
+    "closePositionWithTokenExtensions" AS "ix",
+    JSON_OBJECT(
+        'keyPositionAuthority', toPubkeyBase58(t.keyPositionAuthority),
+        'keyReceiver', toPubkeyBase58(t.keyReceiver),
+        'keyPosition', toPubkeyBase58(t.keyPosition),
+        'keyPositionMint', toPubkeyBase58(t.keyPositionMint),
+        'keyPositionTokenAccount', toPubkeyBase58(t.keyPositionTokenAccount),
+        'keyToken2022Program', toPubkeyBase58(t.keyToken2022Program)
+    ) AS "payload"
+FROM ixsClosePositionWithTokenExtensions t;
+
 
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
