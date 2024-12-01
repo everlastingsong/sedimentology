@@ -10,7 +10,7 @@ use whirlpool_replayer::{serde::AccountDataStoreConfig, Slot};
 
 mod io;
 
-pub async fn process(
+pub fn process(
   in_whirlpool_state_file_path: String,
   in_whirlpool_token_file_path: String,
   in_whirlpool_transaction_file_path: String,

@@ -11,7 +11,7 @@ use anchor_lang::AccountDeserialize;
 mod io;
 mod data;
 
-pub async fn process(
+pub fn process(
   in_whirlpool_state_file_path: String,
   in_whirlpool_token_file_path: String,
   in_whirlpool_event_file_path: String,

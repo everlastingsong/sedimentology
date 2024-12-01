@@ -87,7 +87,7 @@ fn main() {
 
             println!("archiving {} ...", archiving_yyyymmdd_date);
 
-            // export state & transaction to tmp file
+            // export token & state & transaction to tmp file
             println!("exporting token to tmp file ...");
             let token_file_tmpfile = format!("{}/{}.token.tmp", tmpdir, profile);
             io::export_token(archiving_yyyymmdd_date, &token_file_tmpfile, &mut conn);
@@ -143,6 +143,78 @@ fn main() {
             assert!(state_hash == state_verify_hash, "state_hash != state_verify_hash");
             assert!(transaction_hash == transaction_verify_hash, "transaction_hash != transaction_verify_hash");
 
+            // token & state & transaction upload completed
+            // now we need to generate event & ohlcv
+
+            let previous_yyyymmdd_date = date::prev_yyyymmdd_date(archiving_yyyymmdd_date);
+
+            println!("exporting previous state to tmp file ...");
+            let previous_state_file_tmpfile = format!("{}/{}.previous-state.tmp", tmpdir, profile);
+            io::export_state(previous_yyyymmdd_date, &previous_state_file_tmpfile, &mut conn);
+
+            println!("processing event to tmp file ...");
+            let event_file_tmpfile = format!("{}/{}.event.tmp", tmpdir, profile);
+            converter::process::event::process(
+                previous_state_file_tmpfile.clone(),
+                token_file_tmpfile.clone(),
+                transaction_file_tmpfile.clone(),
+                event_file_tmpfile.clone(),
+            ).unwrap(); // TODO: error handling
+
+            println!("processing ohlcv to tmp file ...");
+            let ohlcv_daily_file_tmpfile = format!("{}/{}.ohlcv-daily.tmp", tmpdir, profile);
+            let ohlcv_minutely_file_tmpfile = format!("{}/{}.ohlcv-minutely.tmp", tmpdir, profile);
+            converter::process::ohlcv::process(
+                previous_state_file_tmpfile.clone(),
+                token_file_tmpfile.clone(),
+                event_file_tmpfile.clone(),
+                ohlcv_daily_file_tmpfile.clone(),
+                ohlcv_minutely_file_tmpfile.clone(),
+            ).unwrap(); // TODO: error handling
+
+            // upload event & ohlcv
+
+            let event_hash = command::sha256sum(&event_file_tmpfile);
+            let ohlcv_daily_hash = command::sha256sum(&ohlcv_daily_file_tmpfile);
+            let ohlcv_minutely_hash = command::sha256sum(&ohlcv_minutely_file_tmpfile);
+            println!("event_hash = {}", event_hash);
+            println!("ohlcv_daily_hash = {}", ohlcv_daily_hash);
+            println!("ohlcv_minutely_hash = {}", ohlcv_minutely_hash);
+
+            let event_file_dest = format!("{}/{}/{}/whirlpool-event-{}.jsonl.gz", rclone_remote_path, yyyy, mmdd, archiving_yyyymmdd_date);
+            let ohlcv_daily_file_dest = format!("{}/{}/{}/whirlpool-ohlcv-daily-{}.jsonl.gz", rclone_remote_path, yyyy, mmdd, archiving_yyyymmdd_date);
+            let ohlcv_minutely_file_dest = format!("{}/{}/{}/whirlpool-ohlcv-minutely-{}.jsonl.gz", rclone_remote_path, yyyy, mmdd, archiving_yyyymmdd_date);
+
+            println!("uploading {} to {} ...", event_file_tmpfile, event_file_dest);
+            command::rclone_copyto(&event_file_tmpfile, &event_file_dest);
+
+            println!("uploading {} to {} ...", ohlcv_daily_file_tmpfile, ohlcv_daily_file_dest);
+            command::rclone_copyto(&ohlcv_daily_file_tmpfile, &ohlcv_daily_file_dest);
+
+            println!("uploading {} to {} ...", ohlcv_minutely_file_tmpfile, ohlcv_minutely_file_dest);
+            command::rclone_copyto(&ohlcv_minutely_file_tmpfile, &ohlcv_minutely_file_dest);
+
+            let event_file_verify = format!("{}/{}.event.verify", tmpdir, profile);
+            let ohlcv_daily_file_verify = format!("{}/{}.ohlcv-daily.verify", tmpdir, profile);
+            let ohlcv_minutely_file_verify = format!("{}/{}.ohlcv-minutely.verify", tmpdir, profile);
+
+            println!("downloading {} to {} ...", event_file_dest, event_file_verify);
+            command::rclone_copyto(&event_file_dest, &event_file_verify);
+
+            println!("downloading {} to {} ...", ohlcv_daily_file_dest, ohlcv_daily_file_verify);
+            command::rclone_copyto(&ohlcv_daily_file_dest, &ohlcv_daily_file_verify);
+
+            println!("downloading {} to {} ...", ohlcv_minutely_file_dest, ohlcv_minutely_file_verify);
+            command::rclone_copyto(&ohlcv_minutely_file_dest, &ohlcv_minutely_file_verify);
+
+            println!("verifying ...");
+            let event_verify_hash = command::sha256sum(&event_file_verify);
+            let ohlcv_daily_verify_hash = command::sha256sum(&ohlcv_daily_file_verify);
+            let ohlcv_minutely_verify_hash = command::sha256sum(&ohlcv_minutely_file_verify);
+            assert!(event_hash == event_verify_hash, "event_hash != event_verify_hash");
+            assert!(ohlcv_daily_hash == ohlcv_daily_verify_hash, "ohlcv_daily_hash != ohlcv_daily_verify_hash");
+            assert!(ohlcv_minutely_hash == ohlcv_minutely_verify_hash, "ohlcv_minutely_hash != ohlcv_minutely_verify_hash");
+
             // remove tmp & verify files
             std::fs::remove_file(&token_file_tmpfile).unwrap();
             std::fs::remove_file(&state_file_tmpfile).unwrap();
@@ -150,6 +222,14 @@ fn main() {
             std::fs::remove_file(&token_file_verify).unwrap();
             std::fs::remove_file(&state_file_verify).unwrap();
             std::fs::remove_file(&transaction_file_verify).unwrap();
+
+            std::fs::remove_file(&previous_state_file_tmpfile).unwrap();
+            std::fs::remove_file(&event_file_tmpfile).unwrap();
+            std::fs::remove_file(&ohlcv_daily_file_tmpfile).unwrap();
+            std::fs::remove_file(&ohlcv_minutely_file_tmpfile).unwrap();
+            std::fs::remove_file(&event_file_verify).unwrap();
+            std::fs::remove_file(&ohlcv_daily_file_verify).unwrap();
+            std::fs::remove_file(&ohlcv_minutely_file_verify).unwrap();
 
             // update latest archived date
             println!("updating latest archived date to {} ...", archiving_yyyymmdd_date);
