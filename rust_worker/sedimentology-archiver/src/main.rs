@@ -1,6 +1,5 @@
 use std::thread::sleep;
 use std::time::Duration;
-use ctrlc;
 use std::sync::mpsc::channel;
 
 use mysql::*;
@@ -10,6 +9,7 @@ mod io;
 mod date;
 mod schema;
 mod command;
+mod converter;
 
 #[derive(Parser, Debug)]
 struct Args {
