@@ -7,8 +7,15 @@ edition = "2021"
 
 [dependencies]
 replay-engine = { workspace = true }
+whirlpool-replayer = { workspace = true }
 mysql = { workspace = true }
 clap = { workspace = true }
+anyhow = { workspace = true }
+bigdecimal = { workspace = true }
+
+# re-export on replayer is best
+anchor-lang = "0.29.0"
+whirlpool_base = { git = "https://github.com/orca-so/whirlpools", branch = "yugure/relax-spl-token-version-on-v0.3.2", package = "whirlpool" }
 
 ctrlc = "3.4.1"
 
