@@ -98,28 +98,40 @@ pub fn advance_distributor_dest_state(
   let mut tx = database.start_transaction(TxOpts::default()).unwrap();
   let compression_level = 3; // standard level
 
+  // Inserting one row at a time is slow for a distant database, so insert multiple rows at once.
+  // exec_batch does not reduce the number of communications, so assemble a statement with multiple VALUES.
+  // max_allowed_packet should be set to a large value in the MariaDB configuration.
+  //
+  // see also: https://github.com/blackbeam/rust-mysql-simple/issues/59
+  const INSERT_CHUNK_SIZE: usize = 32;
+
   let mut total_data_size = 0usize;
   let mut total_compressed_data_size = 0usize;
-  for (slot, data) in transactions {
-    let compressed = zstd::encode_all(data.as_bytes(), compression_level).unwrap();
+  for chunk in transactions.chunks(INSERT_CHUNK_SIZE) {
+    let stmt = format!(
+      "INSERT INTO transactions (slot, blockHeight, blockTime, data) VALUES {}", 
+      chunk.iter().map(|_| "(?, ?, ?, ?)").collect::<Vec<_>>().join(", ")
+    );
 
-    // verification
-    let decoded = zstd::decode_all(compressed.as_slice()).unwrap();
-    let decoded_data = std::str::from_utf8(&decoded).unwrap();
-    assert_eq!(decoded_data, data);
+    let mut params = Vec::with_capacity(chunk.len() * 4);
+    for (slot, data) in chunk {
+      let compressed = zstd::encode_all(data.as_bytes(), compression_level).unwrap();
 
-    total_data_size += data.len();
-    total_compressed_data_size += compressed.len();
+      // verification
+      let decoded = zstd::decode_all(compressed.as_slice()).unwrap();
+      let decoded_data = std::str::from_utf8(&decoded).unwrap();
+      assert_eq!(decoded_data, data);
+  
+      total_data_size += data.len();
+      total_compressed_data_size += compressed.len();
+  
+      params.push(mysql::Value::UInt(slot.slot));
+      params.push(mysql::Value::UInt(slot.block_height));
+      params.push(mysql::Value::Int(slot.block_time));
+      params.push(mysql::Value::Bytes(compressed));
+    }
 
-    tx.exec_drop(
-        "INSERT INTO transactions (slot, blockHeight, blockTime, data) VALUES (:s, :h, :t, :d)",
-        params! {
-            "s" => slot.slot,
-            "h" => slot.block_height,
-            "t" => slot.block_time,
-            "d" => compressed,
-        },
-    ).unwrap();  
+    tx.exec_drop(&stmt, params).unwrap();
   }
 
   let latest_slot = transactions.last().unwrap().0;
