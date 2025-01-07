@@ -4,6 +4,8 @@ export enum WorkerQueueName {
   PROCESSOR = "processor",
 }
 
+export type Commitment = "finalized" | "confirmed";
+
 export type State = {
   latestBlockSlot: number;
   latestBlockHeight: number;

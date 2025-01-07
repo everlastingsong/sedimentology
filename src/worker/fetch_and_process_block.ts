@@ -1,6 +1,6 @@
 import { Connection } from "mariadb";
 import { AxiosInstance } from "axios";
-import { Slot } from "../common/types";
+import { Commitment, Slot } from "../common/types";
 import { LRUCache } from "lru-cache";
 import invariant from "tiny-invariant";
 import { DecodedWhirlpoolInstruction, RemainingAccounts, RemainingAccountsInfo, TransferAmountWithTransferFeeConfig, WhirlpoolTransactionDecoder } from "@yugure-orca/whirlpool-tx-decoder";
@@ -13,7 +13,7 @@ const WHIRLPOOL_PROGRAM_DATA_ACCOUNT_SIZE = 1405485;
 
 const pubkeyLRUCache = new LRUCache<string, boolean>({ max: 10_000 });
 
-export async function fetchAndProcessBlock(database: Connection, solana: AxiosInstance, slot: number) {
+export async function fetchAndProcessBlock(database: Connection, solana: AxiosInstance, slot: number, commitment: Commitment) {
   const [processingSlot] = await database.query<Slot[]>('SELECT * FROM admQueuedSlots WHERE slot = ?', [slot]);
 
   if (!processingSlot) {
@@ -44,6 +44,7 @@ export async function fetchAndProcessBlock(database: Connection, solana: AxiosIn
           // If parameter not provided, the default includes rewards.
           // Rewards at the first slot of the epoch is extremely large (>= 150MB), and the response is sometimes broken.
           "rewards": false,
+          "commitment": commitment,
         },
       ],
     },

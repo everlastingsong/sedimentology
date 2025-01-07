@@ -1,7 +1,7 @@
 import mariadb from "mariadb";
 import axios from "axios";
 import { ConnectionOptions, Worker } from "bullmq";
-import { WorkerQueueName } from "../common/types";
+import { Commitment, WorkerQueueName } from "../common/types";
 import { program } from "commander";
 import { addConnectionOptions } from "./options";
 import { fetchAndProcessBlock } from "../worker/fetch_and_process_block";
@@ -9,11 +9,13 @@ import { fetchAndProcessBlock } from "../worker/fetch_and_process_block";
 async function main() {
   addConnectionOptions(program, true, true, true);
   program
-    .option("-c --concurrency <max>", "concurrency", "10");
+    .option("-c --concurrency <max>", "concurrency", "10")
+    .option("-C --confirmed", "commitment is confirmed");
 
   const options = program.parse().opts();
 
   const concurrency = Number(options.concurrency);
+  const commitment: Commitment = options.confirmed ? "confirmed" : "finalized";
 
   const pool = mariadb.createPool({
     host: options.mariadbHost,
@@ -44,7 +46,7 @@ async function main() {
     let db: mariadb.Connection | undefined;
     try {
       db = await pool.getConnection();
-      await fetchAndProcessBlock(db, solana, slot);
+      await fetchAndProcessBlock(db, solana, slot, commitment);
     } catch (err) {
       console.error(err);
       throw err;
