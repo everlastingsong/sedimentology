@@ -1,7 +1,7 @@
 import mariadb from "mariadb";
 import axios from "axios";
 import { ConnectionOptions, Worker } from "bullmq";
-import { WorkerQueueName } from "../common/types";
+import { Commitment, WorkerQueueName } from "../common/types";
 import { program } from "commander";
 import { addConnectionOptions } from "./options";
 import { fetchSlots } from "../worker/fetch_slots";
@@ -10,12 +10,14 @@ async function main() {
   addConnectionOptions(program, true, true, true);
   program
     .option("-q --max-queued-slots <max>", "max queued slots", "10000")
-    .option("-n --new-slot-per-fetch <max>", "new slots per fetch", "200");
+    .option("-n --new-slot-per-fetch <max>", "new slots per fetch", "200")
+    .option("-C --confirmed", "commitment is confirmed");
 
   const options = program.parse().opts();
 
   const maxQueuedSlots = Number(options.maxQueuedSlots);
   const limit = Number(options.newSlotPerFetch);
+  const commitment: Commitment = options.confirmed ? "confirmed" : "finalized";
   const concurrency = 1;
 
   const pool = mariadb.createPool({
@@ -46,7 +48,7 @@ async function main() {
     let db: mariadb.Connection | undefined;
     try {
       db = await pool.getConnection();
-      await fetchSlots(db, solana, limit, maxQueuedSlots);
+      await fetchSlots(db, solana, limit, maxQueuedSlots, commitment);
     } catch (err) {
       console.error(err);
       throw err;

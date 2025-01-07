@@ -1,9 +1,9 @@
 import { Connection } from "mariadb";
 import { AxiosInstance } from "axios";
-import { State } from "../common/types";
+import { Commitment, State } from "../common/types";
 import invariant from "tiny-invariant";
 
-export async function fetchSlots(database: Connection, solana: AxiosInstance, limit: number, maxQueuedSlots: number) {
+export async function fetchSlots(database: Connection, solana: AxiosInstance, limit: number, maxQueuedSlots: number, commitment: Commitment) {
   const [{ count }] = await database.query('SELECT COUNT(*) as count FROM admQueuedSlots WHERE isBackfillSlot IS FALSE');
 
   if (count > maxQueuedSlots) {
@@ -23,7 +23,7 @@ export async function fetchSlots(database: Connection, solana: AxiosInstance, li
       params: [
         latestBlockSlot,
         limit + 1, // latestBlockSlot is included
-        { commitment: "finalized" },
+        { commitment: commitment },
       ],
     },
   });
