@@ -910,6 +910,22 @@ CREATE TABLE `ixsClosePositionWithTokenExtensions` (
   PRIMARY KEY (`txid`,`order`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
+CREATE TABLE `ixsLockPosition` (
+  `txid` bigint(11) unsigned NOT NULL,
+  `order` tinyint(11) unsigned NOT NULL,
+  `dataLockType` JSON NOT NULL COMMENT 'LockType enum',
+  `keyFunder` int(11) unsigned NOT NULL,
+  `keyPositionAuthority` int(11) unsigned NOT NULL,
+  `keyPosition` int(11) unsigned NOT NULL,
+  `keyPositionMint` int(11) unsigned NOT NULL,
+  `keyPositionTokenAccount` int(11) unsigned NOT NULL,
+  `keyLockConfig` int(11) unsigned NOT NULL,
+  `keyWhirlpool` int(11) unsigned NOT NULL,
+  `keyToken2022Program` int(11) unsigned NOT NULL,
+  `keySystemProgram` int(11) unsigned NOT NULL,
+  PRIMARY KEY (`txid`,`order`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+
 
 --
 -- PROCEDURE

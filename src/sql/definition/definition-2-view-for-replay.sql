@@ -1069,6 +1069,25 @@ SELECT
     ) AS "payload"
 FROM ixsClosePositionWithTokenExtensions t;
 
+CREATE OR REPLACE VIEW vwJsonIxsLockPosition AS
+SELECT
+    t.txid,
+    t.order,
+    "lockPosition" AS "ix",
+    JSON_OBJECT(
+        'dataLockType', t.dataLockType,
+        'keyFunder', toPubkeyBase58(t.keyFunder),
+        'keyPositionAuthority', toPubkeyBase58(t.keyPositionAuthority),
+        'keyPosition', toPubkeyBase58(t.keyPosition),
+        'keyPositionMint', toPubkeyBase58(t.keyPositionMint),
+        'keyPositionTokenAccount', toPubkeyBase58(t.keyPositionTokenAccount),
+        'keyLockConfig', toPubkeyBase58(t.keyLockConfig),
+        'keyWhirlpool', toPubkeyBase58(t.keyWhirlpool),
+        'keyToken2022Program', toPubkeyBase58(t.keyToken2022Program),
+        'keySystemProgram', toPubkeyBase58(t.keySystemProgram)
+    ) AS "payload"
+FROM ixsLockPosition t;
+
 
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
