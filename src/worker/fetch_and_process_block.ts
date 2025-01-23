@@ -259,6 +259,7 @@ export async function fetchAndProcessBlock(database: Connection, solana: AxiosIn
         case "setTokenBadgeAuthority":
         case "openPositionWithTokenExtensions":
         case "closePositionWithTokenExtensions":
+        case "lockPosition":
           // This instruction does not affect the token balance.
           break;
         default:
@@ -1321,6 +1322,24 @@ async function insertInstruction(txid: bigint, order: number, ix: DecodedWhirlpo
         ix.accounts.positionMint,
         ix.accounts.positionTokenAccount,
         ix.accounts.token2022Program,
+        // no transfer
+      ]);
+    case "lockPosition":
+      return database.query(buildSQL(ix.name, 1, 9, 0), [
+        txid,
+        order,
+        // data
+        JSON.stringify(ix.data.lockType),
+        // key
+        ix.accounts.funder,
+        ix.accounts.positionAuthority,
+        ix.accounts.position,
+        ix.accounts.positionMint,
+        ix.accounts.positionTokenAccount,
+        ix.accounts.lockConfig,
+        ix.accounts.whirlpool,
+        ix.accounts.token2022Program,
+        ix.accounts.systemProgram,
         // no transfer
       ]);
     default:
