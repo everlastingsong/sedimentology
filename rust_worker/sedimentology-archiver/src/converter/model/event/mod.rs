@@ -100,6 +100,8 @@ pub enum WhirlpoolEvent {
     PositionOpened(PositionOpenedEventPayload),
     #[serde(rename = "PC")]
     PositionClosed(PositionClosedEventPayload),
+    #[serde(rename = "PL")]
+    PositionLocked(PositionLockedEventPayload),
 
     // Position Bundle
     #[serde(rename = "PBI")]
