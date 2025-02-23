@@ -15,7 +15,7 @@ bigdecimal = { workspace = true }
 
 # re-export on replayer is best
 anchor-lang = "0.29.0"
-whirlpool_base = { git = "https://github.com/orca-so/whirlpools", branch = "yugure/relax-spl-token-version-on-v0.3.2", package = "whirlpool" }
+whirlpool_base = { workspace = true }
 
 ctrlc = "3.4.1"
 

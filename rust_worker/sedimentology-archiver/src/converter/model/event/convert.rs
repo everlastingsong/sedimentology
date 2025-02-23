@@ -12,7 +12,7 @@ use super::{definition::*, WhirlpoolEvent};
 use anchor_lang::prelude::*;
 use whirlpool_base::{
     math::sqrt_price_from_tick_index,
-    state::{FeeTier, Position, Whirlpool, WhirlpoolsConfig, WhirlpoolsConfigExtension},
+    state::{FeeTier, LockConfig, Position, Whirlpool, WhirlpoolsConfig, WhirlpoolsConfigExtension},
 };
 
 pub fn build_whirlpool_events(
@@ -1046,6 +1046,43 @@ pub fn build_whirlpool_events(
             }));
         }
         ////////////////////////////////////////////////////////////////////////////////
+        // PositionLocked: LockPosition
+        ////////////////////////////////////////////////////////////////////////////////
+        DecodedWhirlpoolInstruction::LockPosition(params) => {
+            let new_position = get_new_position(accounts, &params.key_position);
+            let new_whirlpool = get_new_whirlpool(accounts, &new_position.whirlpool.to_string());
+            let new_lock_config = get_new_lock_config(accounts, &params.key_lock_config);
+            
+            events.push(WhirlpoolEvent::PositionLocked(
+                PositionLockedEventPayload {
+                    origin: PositionLockedEventOrigin::LockPosition,
+                    whirlpool: new_position.whirlpool.to_string(),
+                    position: params.key_position.clone(),
+                    lock_type: match params.data_lock_type {
+                        replay_engine::decoded_instructions::LockType::Permanent => PositionLockType::Permanent,
+                    },
+                    lock_config: params.key_lock_config.clone(),
+                    lower_tick_index: new_position.tick_lower_index,
+                    upper_tick_index: new_position.tick_upper_index,
+                    lower_decimal_price: tick_index_to_decimal_price(
+                        new_position.tick_lower_index,
+                        &new_whirlpool.token_mint_a,
+                        &new_whirlpool.token_mint_b,
+                        decimals,
+                    ),
+                    upper_decimal_price: tick_index_to_decimal_price(
+                        new_position.tick_upper_index,
+                        &new_whirlpool.token_mint_a,
+                        &new_whirlpool.token_mint_b,
+                        decimals,
+                    ),
+                    locked_liquidity: new_position.liquidity,
+                    position_owner: new_lock_config.position_owner.to_string(),
+                    position_mint: params.key_position_mint.clone(),
+                },
+            ));
+        }
+        ////////////////////////////////////////////////////////////////////////////////
         // PositionBundleInitialized: InitializePositionBundle, InitializePositionBundleWithMetadata
         ////////////////////////////////////////////////////////////////////////////////
         DecodedWhirlpoolInstruction::InitializePositionBundle(params) => {
@@ -1586,6 +1623,14 @@ fn get_new_config_extension(
 ) -> WhirlpoolsConfigExtension {
     let post_data = accounts.get(pubkey).unwrap().unwrap();
     WhirlpoolsConfigExtension::try_deserialize(&mut post_data.as_slice()).unwrap()
+}
+
+fn get_new_lock_config(
+    accounts: &AccountDataStore,
+    pubkey: &PubkeyString,
+) -> LockConfig {
+    let post_data = accounts.get(pubkey).unwrap().unwrap();
+    LockConfig::try_deserialize(&mut post_data.as_slice()).unwrap()
 }
 
 fn tick_index_to_decimal_price(

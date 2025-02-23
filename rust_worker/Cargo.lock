@@ -3814,8 +3814,8 @@ dependencies = [
 
 [[package]]
 name = "replay-engine"
-version = "0.1.6"
-source = "git+https://github.com/orca-so/whirlpool-tx-replayer?tag=v0.1.6#6cf93669446dd193fbcf9bf21562b44aa2424536"
+version = "0.1.7"
+source = "git+https://github.com/orca-so/whirlpool-tx-replayer?tag=v0.1.7#071c802ee2dd2914914ade9f79e5a6f4fa396e89"
 dependencies = [
  "anchor-client",
  "anchor-lang",
@@ -6631,8 +6631,8 @@ checksum = "5f20c57d8d7db6d3b86154206ae5d8fba62dd39573114de97c2cb0578251f8e1"
 
 [[package]]
 name = "whirlpool"
-version = "0.3.2"
-source = "git+https://github.com/orca-so/whirlpools?branch=yugure/relax-spl-token-version-on-v0.3.2#96c914dbdc23f96c2941cd1c0c15bfb5e64e8850"
+version = "0.3.4"
+source = "git+https://github.com/orca-so/whirlpools?branch=yugure/ll-relax-spl-token-version#390f3df4b62483e9aedbd2b693d6c1838abc4f16"
 dependencies = [
  "anchor-lang",
  "anchor-spl",
@@ -6649,8 +6649,8 @@ dependencies = [
 
 [[package]]
 name = "whirlpool-replayer"
-version = "0.1.6"
-source = "git+https://github.com/orca-so/whirlpool-tx-replayer?tag=v0.1.6#6cf93669446dd193fbcf9bf21562b44aa2424536"
+version = "0.1.7"
+source = "git+https://github.com/orca-so/whirlpool-tx-replayer?tag=v0.1.7#071c802ee2dd2914914ade9f79e5a6f4fa396e89"
 dependencies = [
  "base64 0.21.7",
  "bincode",

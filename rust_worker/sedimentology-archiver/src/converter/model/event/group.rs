@@ -33,6 +33,7 @@ impl WhirlpoolEventGroup {
                     | WhirlpoolEvent::RewardInitialized(_)
                     | WhirlpoolEvent::RewardEmissionsUpdated(_)
                     | WhirlpoolEvent::RewardAuthorityUpdated(_)
+                    | WhirlpoolEvent::PositionLocked(_)
             ),
             WhirlpoolEventGroup::All => true,
         }
