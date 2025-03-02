@@ -1,4 +1,4 @@
-use super::super::super::serde::string_decimal_price;
+use super::super::super::serde::{string_u128, string_decimal_price};
 use super::{DecimalPrice, PubkeyString};
 use serde_derive::{Serialize, Deserialize};
 
@@ -27,7 +27,7 @@ pub struct PositionLockedEventPayload {
     #[serde(rename = "udp", with = "string_decimal_price")]
     pub upper_decimal_price: DecimalPrice,
 
-    #[serde(rename = "ll")]
+    #[serde(rename = "ll", with = "string_u128")]
     pub locked_liquidity: u128,
 
     #[serde(rename = "po")]
