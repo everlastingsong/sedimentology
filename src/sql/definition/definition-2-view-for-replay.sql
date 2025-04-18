@@ -1088,6 +1088,39 @@ SELECT
     ) AS "payload"
 FROM ixsLockPosition t;
 
+CREATE OR REPLACE VIEW vwJsonIxsResetPositionRange AS
+SELECT
+    t.txid,
+    t.order,
+    "resetPositionRange" AS "ix",
+    JSON_OBJECT(
+        'dataNewTickLowerIndex', t.dataNewTickLowerIndex,
+        'dataNewTickUpperIndex', t.dataNewTickUpperIndex,
+        'keyFunder', toPubkeyBase58(t.keyFunder),
+        'keyPositionAuthority', toPubkeyBase58(t.keyPositionAuthority),
+        'keyWhirlpool', toPubkeyBase58(t.keyWhirlpool),
+        'keyPosition', toPubkeyBase58(t.keyPosition),
+        'keyPositionTokenAccount', toPubkeyBase58(t.keyPositionTokenAccount),
+        'keySystemProgram', toPubkeyBase58(t.keySystemProgram)
+    ) AS "payload"
+FROM ixsResetPositionRange t;
+
+CREATE OR REPLACE VIEW vwJsonIxsTransferLockedPosition AS
+SELECT
+    t.txid,
+    t.order,
+    "transferLockedPosition" AS "ix",
+    JSON_OBJECT(
+        'keyPositionAuthority', toPubkeyBase58(t.keyPositionAuthority),
+        'keyReceiver', toPubkeyBase58(t.keyReceiver),
+        'keyPosition', toPubkeyBase58(t.keyPosition),
+        'keyPositionMint', toPubkeyBase58(t.keyPositionMint),
+        'keyPositionTokenAccount', toPubkeyBase58(t.keyPositionTokenAccount),
+        'keyDestinationTokenAccount', toPubkeyBase58(t.keyDestinationTokenAccount),
+        'keyLockConfig', toPubkeyBase58(t.keyLockConfig),
+        'keyToken2022Program', toPubkeyBase58(t.keyToken2022Program)
+    ) AS "payload"
+FROM ixsTransferLockedPosition t;
 
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;

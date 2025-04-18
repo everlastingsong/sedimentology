@@ -926,6 +926,33 @@ CREATE TABLE `ixsLockPosition` (
   PRIMARY KEY (`txid`,`order`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
+CREATE TABLE `ixsResetPositionRange` (
+  `txid` bigint(11) unsigned NOT NULL,
+  `order` tinyint(11) unsigned NOT NULL,
+  `dataNewTickLowerIndex` int(11) NOT NULL COMMENT 'i32',
+  `dataNewTickUpperIndex` int(11) NOT NULL COMMENT 'i32',
+  `keyFunder` int(11) unsigned NOT NULL,
+  `keyPositionAuthority` int(11) unsigned NOT NULL,
+  `keyWhirlpool` int(11) unsigned NOT NULL,
+  `keyPosition` int(11) unsigned NOT NULL,
+  `keyPositionTokenAccount` int(11) unsigned NOT NULL,
+  `keySystemProgram` int(11) unsigned NOT NULL,
+  PRIMARY KEY (`txid`,`order`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+
+CREATE TABLE `ixsTransferLockedPosition` (
+  `txid` bigint(11) unsigned NOT NULL,
+  `order` tinyint(11) unsigned NOT NULL,
+  `keyPositionAuthority` int(11) unsigned NOT NULL,
+  `keyReceiver` int(11) unsigned NOT NULL,
+  `keyPosition` int(11) unsigned NOT NULL,
+  `keyPositionMint` int(11) unsigned NOT NULL,
+  `keyPositionTokenAccount` int(11) unsigned NOT NULL,
+  `keyDestinationTokenAccount` int(11) unsigned NOT NULL,
+  `keyLockConfig` int(11) unsigned NOT NULL,
+  `keyToken2022Program` int(11) unsigned NOT NULL,
+  PRIMARY KEY (`txid`,`order`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 --
 -- PROCEDURE
