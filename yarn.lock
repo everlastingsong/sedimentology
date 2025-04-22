@@ -388,10 +388,10 @@
   dependencies:
     "@types/node" "*"
 
-"@yugure-orca/whirlpool-tx-decoder@0.2.7":
-  version "0.2.7"
-  resolved "https://registry.yarnpkg.com/@yugure-orca/whirlpool-tx-decoder/-/whirlpool-tx-decoder-0.2.7.tgz#51ac559c66152d2dc2d53c0bddee2103bf5bb2f0"
-  integrity sha512-1YuJ39WLBKgQLgU3fKN+hhqnBx2Jb3PXGPWuCHVqH3pJl7O5DYaPUpwQEf5SuAGfqDh1g5eCAROyHfPTlm1cpw==
+"@yugure-orca/whirlpool-tx-decoder@0.2.8":
+  version "0.2.8"
+  resolved "https://registry.yarnpkg.com/@yugure-orca/whirlpool-tx-decoder/-/whirlpool-tx-decoder-0.2.8.tgz#dd11bb353891404eb381a8f76eacb81dc1d224c6"
+  integrity sha512-8EEfaBQ01TWf5X7Vt5nhJm2SgDjRVU+dABDjXtlg8ogvspj1oBGparO3RKpMSJ+yHetHBdIGHSBVyOoFBxQv7w==
   dependencies:
     "@coral-xyz/anchor" "^0.29.0"
     "@solana/spl-token" "^0.4.1"

@@ -1084,7 +1084,8 @@ SELECT
         'keyLockConfig', toPubkeyBase58(t.keyLockConfig),
         'keyWhirlpool', toPubkeyBase58(t.keyWhirlpool),
         'keyToken2022Program', toPubkeyBase58(t.keyToken2022Program),
-        'keySystemProgram', toPubkeyBase58(t.keySystemProgram)
+        'keySystemProgram', toPubkeyBase58(t.keySystemProgram),
+        'auxKeyPositionTokenAccountOwner', toPubkeyBase58(t.auxKeyPositionTokenAccountOwner)
     ) AS "payload"
 FROM ixsLockPosition t;
 
@@ -1118,7 +1119,8 @@ SELECT
         'keyPositionTokenAccount', toPubkeyBase58(t.keyPositionTokenAccount),
         'keyDestinationTokenAccount', toPubkeyBase58(t.keyDestinationTokenAccount),
         'keyLockConfig', toPubkeyBase58(t.keyLockConfig),
-        'keyToken2022Program', toPubkeyBase58(t.keyToken2022Program)
+        'keyToken2022Program', toPubkeyBase58(t.keyToken2022Program),
+        'auxKeyDestinationTokenAccountOwner', toPubkeyBase58(t.auxKeyDestinationTokenAccountOwner)
     ) AS "payload"
 FROM ixsTransferLockedPosition t;
 

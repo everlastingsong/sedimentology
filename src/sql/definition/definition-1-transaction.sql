@@ -923,6 +923,7 @@ CREATE TABLE `ixsLockPosition` (
   `keyWhirlpool` int(11) unsigned NOT NULL,
   `keyToken2022Program` int(11) unsigned NOT NULL,
   `keySystemProgram` int(11) unsigned NOT NULL,
+  `auxKeyPositionTokenAccountOwner` int(11) unsigned NOT NULL,
   PRIMARY KEY (`txid`,`order`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
@@ -951,6 +952,7 @@ CREATE TABLE `ixsTransferLockedPosition` (
   `keyDestinationTokenAccount` int(11) unsigned NOT NULL,
   `keyLockConfig` int(11) unsigned NOT NULL,
   `keyToken2022Program` int(11) unsigned NOT NULL,
+  `auxKeyDestinationTokenAccountOwner` int(11) unsigned NOT NULL,
   PRIMARY KEY (`txid`,`order`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
