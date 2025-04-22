@@ -1046,6 +1046,51 @@ pub fn build_whirlpool_events(
             }));
         }
         ////////////////////////////////////////////////////////////////////////////////
+        // PositionRangeReset: ResetPositionRange
+        ////////////////////////////////////////////////////////////////////////////////
+        DecodedWhirlpoolInstruction::ResetPositionRange(params) => {
+            let old_position = get_old_position(writable_account_snapshot, &params.key_position);
+            let new_position = get_new_position(accounts, &params.key_position);
+            let new_whirlpool = get_new_whirlpool(accounts, &new_position.whirlpool.to_string());
+
+            events.push(WhirlpoolEvent::PositionRangeReset(
+                PositionRangeResetEventPayload {
+                    origin: PositionRangeResetEventOrigin::ResetPositionRange,
+                    whirlpool: new_position.whirlpool.to_string(),
+                    position: params.key_position.clone(),
+                    old_lower_tick_index: old_position.tick_lower_index,
+                    old_upper_tick_index: old_position.tick_upper_index,
+                    old_lower_decimal_price: tick_index_to_decimal_price(
+                        old_position.tick_lower_index,
+                        &new_whirlpool.token_mint_a,
+                        &new_whirlpool.token_mint_b,
+                        decimals,
+                    ),
+                    old_upper_decimal_price: tick_index_to_decimal_price(
+                        old_position.tick_upper_index,
+                        &new_whirlpool.token_mint_a,
+                        &new_whirlpool.token_mint_b,
+                        decimals,
+                    ),
+                    new_lower_tick_index: new_position.tick_lower_index,
+                    new_upper_tick_index: new_position.tick_upper_index,
+                    new_lower_decimal_price: tick_index_to_decimal_price(
+                        new_position.tick_lower_index,
+                        &new_whirlpool.token_mint_a,
+                        &new_whirlpool.token_mint_b,
+                        decimals,
+                    ),
+                    new_upper_decimal_price: tick_index_to_decimal_price(
+                        new_position.tick_upper_index,
+                        &new_whirlpool.token_mint_a,
+                        &new_whirlpool.token_mint_b,
+                        decimals,
+                    ),
+                    position_authority: params.key_position_authority.clone(),
+                },
+            ));
+        }
+        ////////////////////////////////////////////////////////////////////////////////
         // PositionLocked: LockPosition
         ////////////////////////////////////////////////////////////////////////////////
         DecodedWhirlpoolInstruction::LockPosition(params) => {
@@ -1078,6 +1123,46 @@ pub fn build_whirlpool_events(
                     ),
                     locked_liquidity: new_position.liquidity,
                     position_owner: new_lock_config.position_owner.to_string(),
+                    position_mint: params.key_position_mint.clone(),
+                },
+            ));
+        }
+        ////////////////////////////////////////////////////////////////////////////////
+        // PositionLockedTransferred: TransferLockedPosition
+        ////////////////////////////////////////////////////////////////////////////////
+        DecodedWhirlpoolInstruction::TransferLockedPosition(params) => {
+            let old_lock_config = get_old_lock_config(writable_account_snapshot, &params.key_lock_config);
+            let new_position = get_new_position(accounts, &params.key_position);
+            let new_whirlpool = get_new_whirlpool(accounts, &new_position.whirlpool.to_string());
+            let new_lock_config = get_new_lock_config(accounts, &params.key_lock_config);
+
+            events.push(WhirlpoolEvent::PositionLockedTransferred(
+                PositionLockedTransferredEventPayload {
+                    origin: PositionLockedTransferredEventOrigin::TranssferLockedPosition,
+                    whirlpool: new_position.whirlpool.to_string(),
+                    position: params.key_position.clone(),
+                    lock_type: match new_lock_config.lock_type {
+                        whirlpool_base::state::LockTypeLabel::Permanent => PositionLockType::Permanent,
+                        _ => unreachable!(),
+                    },
+                    lock_config: params.key_lock_config.clone(),
+                    lower_tick_index: new_position.tick_lower_index,
+                    upper_tick_index: new_position.tick_upper_index,
+                    lower_decimal_price: tick_index_to_decimal_price(
+                        new_position.tick_lower_index,
+                        &new_whirlpool.token_mint_a,
+                        &new_whirlpool.token_mint_b,
+                        decimals,
+                    ),
+                    upper_decimal_price: tick_index_to_decimal_price(
+                        new_position.tick_upper_index,
+                        &new_whirlpool.token_mint_a,
+                        &new_whirlpool.token_mint_b,
+                        decimals,
+                    ),
+                    locked_liquidity: new_position.liquidity,
+                    old_position_owner: old_lock_config.position_owner.to_string(),
+                    new_position_owner: new_lock_config.position_owner.to_string(),
                     position_mint: params.key_position_mint.clone(),
                 },
             ));
@@ -1623,6 +1708,14 @@ fn get_new_config_extension(
 ) -> WhirlpoolsConfigExtension {
     let post_data = accounts.get(pubkey).unwrap().unwrap();
     WhirlpoolsConfigExtension::try_deserialize(&mut post_data.as_slice()).unwrap()
+}
+
+fn get_old_lock_config(
+    writable_account_snapshot: &WritableAccountSnapshot,
+    pubkey: &PubkeyString,
+) -> LockConfig {
+    let pre_data = writable_account_snapshot.pre_snapshot.get(pubkey).unwrap();
+    LockConfig::try_deserialize(&mut pre_data.as_slice()).unwrap()
 }
 
 fn get_new_lock_config(

@@ -3815,7 +3815,7 @@ dependencies = [
 [[package]]
 name = "replay-engine"
 version = "0.1.8"
-source = "git+https://github.com/orca-so/whirlpool-tx-replayer?branch=yugure%2Freset-pos-range-and-transfer-locked-pos#440157fc67fff4e31fa26dc7eb1a28099dd26c17"
+source = "git+https://github.com/orca-so/whirlpool-tx-replayer?tag=v0.1.8#966d03eb9200a647afbfd50c5e14fda5595cdc44"
 dependencies = [
  "anchor-client",
  "anchor-lang",
@@ -6650,7 +6650,7 @@ dependencies = [
 [[package]]
 name = "whirlpool-replayer"
 version = "0.1.8"
-source = "git+https://github.com/orca-so/whirlpool-tx-replayer?branch=yugure%2Freset-pos-range-and-transfer-locked-pos#440157fc67fff4e31fa26dc7eb1a28099dd26c17"
+source = "git+https://github.com/orca-so/whirlpool-tx-replayer?tag=v0.1.8#966d03eb9200a647afbfd50c5e14fda5595cdc44"
 dependencies = [
  "base64 0.21.7",
  "bincode",
