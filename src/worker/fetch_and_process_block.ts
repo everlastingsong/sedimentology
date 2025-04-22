@@ -143,6 +143,14 @@ export async function fetchAndProcessBlock(database: Connection, solana: AxiosIn
           touchedPubkeys.add(ix.data.collectProtocolFeesAuthority);
           touchedPubkeys.add(ix.data.rewardEmissionsSuperAuthority);
           break;
+        // auxiliaries
+        case "lockPosition":
+          touchedPubkeys.add(ix.auxiliaries.positionTokenAccountOwner);
+          break;
+        case "transferLockedPosition":
+          touchedPubkeys.add(ix.auxiliaries.destinationTokenAccountOwner);
+          break;
+        // remaining accounts
         case "collectFeesV2":
         case "collectProtocolFeesV2":
         case "collectRewardV2":
@@ -260,6 +268,8 @@ export async function fetchAndProcessBlock(database: Connection, solana: AxiosIn
         case "openPositionWithTokenExtensions":
         case "closePositionWithTokenExtensions":
         case "lockPosition":
+        case "resetPositionRange":
+        case "transferLockedPosition":
           // This instruction does not affect the token balance.
           break;
         default:
@@ -1325,7 +1335,7 @@ async function insertInstruction(txid: bigint, order: number, ix: DecodedWhirlpo
         // no transfer
       ]);
     case "lockPosition":
-      return database.query(buildSQL(ix.name, 1, 9, 0), [
+      return database.query(buildSQL(ix.name, 1, 9 + 1, 0), [
         txid,
         order,
         // data
@@ -1340,6 +1350,42 @@ async function insertInstruction(txid: bigint, order: number, ix: DecodedWhirlpo
         ix.accounts.whirlpool,
         ix.accounts.token2022Program,
         ix.accounts.systemProgram,
+        // aux as key
+        ix.auxiliaries.positionTokenAccountOwner,
+        // no transfer
+      ]);
+    case "resetPositionRange":
+      return database.query(buildSQL(ix.name, 2, 6, 0), [
+        txid,
+        order,
+        // data
+        ix.data.newTickLowerIndex,
+        ix.data.newTickUpperIndex,
+        // key
+        ix.accounts.funder,
+        ix.accounts.positionAuthority,
+        ix.accounts.whirlpool,
+        ix.accounts.position,
+        ix.accounts.positionTokenAccount,
+        ix.accounts.systemProgram,
+        // no transfer
+      ]);
+    case "transferLockedPosition":
+      return database.query(buildSQL(ix.name, 0, 8 + 1, 0), [
+        txid,
+        order,
+        // no data
+        // key
+        ix.accounts.positionAuthority,
+        ix.accounts.receiver,
+        ix.accounts.position,
+        ix.accounts.positionMint,
+        ix.accounts.positionTokenAccount,
+        ix.accounts.destinationTokenAccount,
+        ix.accounts.lockConfig,
+        ix.accounts.token2022Program,
+        // aux as key
+        ix.auxiliaries.destinationTokenAccountOwner,
         // no transfer
       ]);
     default:

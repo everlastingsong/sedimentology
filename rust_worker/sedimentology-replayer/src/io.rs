@@ -203,6 +203,8 @@ pub fn fetch_instructions_in_slot(slot: u64, database: &mut PooledConn) -> Vec<I
           UNION ALL SELECT * FROM vwJsonIxsOpenPositionWithTokenExtensions WHERE txid BETWEEN :s and :e
           UNION ALL SELECT * FROM vwJsonIxsClosePositionWithTokenExtensions WHERE txid BETWEEN :s and :e
           UNION ALL SELECT * FROM vwJsonIxsLockPosition WHERE txid BETWEEN :s and :e
+          UNION ALL SELECT * FROM vwJsonIxsResetPositionRange WHERE txid BETWEEN :s and :e
+          UNION ALL SELECT * FROM vwJsonIxsTransferLockedPosition WHERE txid BETWEEN :s and :e
           ",
           // no ORDER BY clause, sort at the client side
       params! {
