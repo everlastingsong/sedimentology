@@ -1124,6 +1124,61 @@ SELECT
     ) AS "payload"
 FROM ixsTransferLockedPosition t;
 
+CREATE OR REPLACE VIEW vwJsonIxsInitializeAdaptiveFeeTier AS
+SELECT
+    t.txid,
+    t.order,
+    "initializeAdaptiveFeeTier" AS "ix",
+    JSON_OBJECT(
+        'dataFeeTierIndex', t.dataFeeTierIndex,
+        'dataTickSpacing', t.dataTickSpacing,
+        'dataDefaultBaseFeeRate', t.dataDefaultBaseFeeRate,
+        'dataFilterPeriod', t.dataFilterPeriod,
+        'dataDecayPeriod', t.dataDecayPeriod,
+        'dataReductionFactor', t.dataReductionFactor,
+        'dataAdaptiveFeeControlFactor', t.dataAdaptiveFeeControlFactor,
+        'dataMaxVolatilityAccumulator', t.dataMaxVolatilityAccumulator,
+        'dataTickGroupSize', t.dataTickGroupSize,
+        'dataMajorSwapThresholdTicks', t.dataMajorSwapThresholdTicks,
+        'dataInitializePoolAuthority', toPubkeyBase58(t.dataInitializePoolAuthority),
+        'dataDelegatedFeeAuthority', toPubkeyBase58(t.dataDelegatedFeeAuthority),
+        'keyWhirlpoolsConfig', toPubkeyBase58(t.keyWhirlpoolsConfig),
+        'keyAdaptiveFeeTier', toPubkeyBase58(t.keyAdaptiveFeeTier),
+        'keyFunder', toPubkeyBase58(t.keyFunder),
+        'keyFeeAuthority', toPubkeyBase58(t.keyFeeAuthority),
+        'keySystemProgram', toPubkeyBase58(t.keySystemProgram)
+    ) AS "payload"
+FROM ixsInitializeAdaptiveFeeTier t;
+
+CREATE OR REPLACE VIEW vwJsonIxsInitializePoolWithAdaptiveFee AS
+SELECT
+    t.txid,
+    t.order,
+    "initializePoolWithAdaptiveFee" AS "ix",
+    JSON_OBJECT(
+        'dataInitialSqrtPrice', toU128String(t.dataInitialSqrtPrice),
+        'dataTradeEnableTimestamp', toU64String(t.dataTradeEnableTimestamp),
+        'keyWhirlpoolsConfig', toPubkeyBase58(t.keyWhirlpoolsConfig),
+        'keyTokenMintA', toPubkeyBase58(t.keyTokenMintA),
+        'keyTokenMintB', toPubkeyBase58(t.keyTokenMintB),
+        'keyTokenBadgeA', toPubkeyBase58(t.keyTokenBadgeA),
+        'keyTokenBadgeB', toPubkeyBase58(t.keyTokenBadgeB),
+        'keyFunder', toPubkeyBase58(t.keyFunder),
+        'keyInitializePoolAuthority', toPubkeyBase58(t.keyInitializePoolAuthority),
+        'keyWhirlpool', toPubkeyBase58(t.keyWhirlpool),
+        'keyOracle', toPubkeyBase58(t.keyOracle),
+        'keyTokenVaultA', toPubkeyBase58(t.keyTokenVaultA),
+        'keyTokenVaultB', toPubkeyBase58(t.keyTokenVaultB),
+        'keyAdaptiveFeeTier', toPubkeyBase58(t.keyAdaptiveFeeTier),
+        'keyTokenProgramA', toPubkeyBase58(t.keyTokenProgramA),
+        'keyTokenProgramB', toPubkeyBase58(t.keyTokenProgramB),
+        'keySystemProgram', toPubkeyBase58(t.keySystemProgram),
+        'keyRent', toPubkeyBase58(t.keyRent),
+        'decimalsTokenMintA', CAST(resolveDecimals(t.keyTokenMintA) AS UNSIGNED),
+        'decimalsTokenMintB', CAST(resolveDecimals(t.keyTokenMintB) AS UNSIGNED)
+    ) AS "payload"
+FROM ixsInitializePoolWithAdaptiveFee t;
+
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
 /*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;

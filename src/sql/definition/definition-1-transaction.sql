@@ -956,6 +956,53 @@ CREATE TABLE `ixsTransferLockedPosition` (
   PRIMARY KEY (`txid`,`order`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
+CREATE TABLE `ixsInitializeAdaptiveFeeTier` (
+  `txid` bigint(11) unsigned NOT NULL,
+  `order` tinyint(11) unsigned NOT NULL,
+  `dataFeeTierIndex` smallint(11) unsigned NOT NULL COMMENT 'u16',
+  `dataTickSpacing` smallint(11) unsigned NOT NULL COMMENT 'u16',
+  `dataDefaultBaseFeeRate` smallint(11) unsigned NOT NULL COMMENT 'u16',
+  `dataFilterPeriod` smallint(11) unsigned NOT NULL COMMENT 'u16',
+  `dataDecayPeriod` smallint(11) unsigned NOT NULL COMMENT 'u16',
+  `dataReductionFactor` smallint(11) unsigned NOT NULL COMMENT 'u16',
+  `dataAdaptiveFeeControlFactor` int(11) unsigned NOT NULL COMMENT 'u32',
+  `dataMaxVolatilityAccumulator` int(11) unsigned NOT NULL COMMENT 'u32',
+  `dataTickGroupSize` smallint(11) unsigned NOT NULL COMMENT 'u16',
+  `dataMajorSwapThresholdTicks` smallint(11) unsigned NOT NULL COMMENT 'u16',
+  `dataInitializePoolAuthority` int(11) unsigned NOT NULL COMMENT 'pubkey',
+  `dataDelegatedFeeAuthority` int(11) unsigned NOT NULL COMMENT 'pubkey',
+  `keyWhirlpoolsConfig` int(11) unsigned NOT NULL,
+  `keyAdaptiveFeeTier` int(11) unsigned NOT NULL,
+  `keyFunder` int(11) unsigned NOT NULL,
+  `keyFeeAuthority` int(11) unsigned NOT NULL,
+  `keySystemProgram` int(11) unsigned NOT NULL,
+  PRIMARY KEY (`txid`,`order`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+
+CREATE TABLE `ixsInitializePoolWithAdaptiveFee` (
+  `txid` bigint(11) unsigned NOT NULL,
+  `order` tinyint(11) unsigned NOT NULL,
+  `dataInitialSqrtPrice` decimal(39,0) unsigned NOT NULL COMMENT 'u128',
+  `dataTradeEnableTimestamp` bigint(11) unsigned NOT NULL COMMENT 'u64',
+  `keyWhirlpoolsConfig` int(11) unsigned NOT NULL,
+  `keyTokenMintA` int(11) unsigned NOT NULL,
+  `keyTokenMintB` int(11) unsigned NOT NULL,
+  `keyTokenBadgeA` int(11) unsigned NOT NULL,
+  `keyTokenBadgeB` int(11) unsigned NOT NULL,
+  `keyFunder` int(11) unsigned NOT NULL,
+  `keyInitializePoolAuthority` int(11) unsigned NOT NULL,
+  `keyWhirlpool` int(11) unsigned NOT NULL,
+  `keyOracle` int(11) unsigned NOT NULL,
+  `keyTokenVaultA` int(11) unsigned NOT NULL,
+  `keyTokenVaultB` int(11) unsigned NOT NULL,
+  `keyAdaptiveFeeTier` int(11) unsigned NOT NULL,
+  `keyTokenProgramA` int(11) unsigned NOT NULL,
+  `keyTokenProgramB` int(11) unsigned NOT NULL,
+  `keySystemProgram` int(11) unsigned NOT NULL,
+  `keyRent` int(11) unsigned NOT NULL,
+  PRIMARY KEY (`txid`,`order`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+
 --
 -- PROCEDURE
 --
