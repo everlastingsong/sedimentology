@@ -264,6 +264,8 @@ pub fn fetch_transactions(slots: &Vec<Slot>, database: &mut PooledConn) -> Vec<(
           UNION ALL SELECT * FROM vwJsonIxsLockPosition WHERE txid BETWEEN :s and :e
           UNION ALL SELECT * FROM vwJsonIxsResetPositionRange WHERE txid BETWEEN :s and :e
           UNION ALL SELECT * FROM vwJsonIxsTransferLockedPosition WHERE txid BETWEEN :s and :e
+          UNION ALL SELECT * FROM vwJsonIxsInitializeAdaptiveFeeTier WHERE txid BETWEEN :s and :e
+          UNION ALL SELECT * FROM vwJsonIxsInitializePoolWithAdaptiveFee WHERE txid BETWEEN :s and :e
           ",
           // no ORDER BY clause, sort at the client side
       params! {

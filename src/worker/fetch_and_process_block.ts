@@ -143,6 +143,10 @@ export async function fetchAndProcessBlock(database: Connection, solana: AxiosIn
           touchedPubkeys.add(ix.data.collectProtocolFeesAuthority);
           touchedPubkeys.add(ix.data.rewardEmissionsSuperAuthority);
           break;
+        case "initializeAdaptiveFeeTier":
+          touchedPubkeys.add(ix.data.initializePoolAuthority);
+          touchedPubkeys.add(ix.data.delegatedFeeAuthority);
+          break;
         // auxiliaries
         case "lockPosition":
           touchedPubkeys.add(ix.auxiliaries.positionTokenAccountOwner);
@@ -171,6 +175,7 @@ export async function fetchAndProcessBlock(database: Connection, solana: AxiosIn
       switch (ix.name) {
         case "initializePool":
         case "initializePoolV2":
+        case "initializePoolWithAdaptiveFee":
           introducedDecimals.set(ix.accounts.tokenMintA, ix.decimals.tokenMintA);
           introducedDecimals.set(ix.accounts.tokenMintB, ix.decimals.tokenMintB);
           break;
@@ -190,7 +195,8 @@ export async function fetchAndProcessBlock(database: Connection, solana: AxiosIn
       switch (ix.name) {
         case "initializePool":
         case "initializePoolV2":
-          // This instruction does not affect the token balance and preTokenBalance cannot be obtained.
+        case "initializePoolWithAdaptiveFee":
+            // This instruction does not affect the token balance and preTokenBalance cannot be obtained.
           initializingVaultPubkeys.add(ix.accounts.tokenVaultA);
           initializingVaultPubkeys.add(ix.accounts.tokenVaultB);
           break;
@@ -270,6 +276,7 @@ export async function fetchAndProcessBlock(database: Connection, solana: AxiosIn
         case "lockPosition":
         case "resetPositionRange":
         case "transferLockedPosition":
+        case "initializeAdaptiveFeeTier":
           // This instruction does not affect the token balance.
           break;
         default:
@@ -1388,6 +1395,58 @@ async function insertInstruction(txid: bigint, order: number, ix: DecodedWhirlpo
         ix.auxiliaries.destinationTokenAccountOwner,
         // no transfer
       ]);
+    case "initializeAdaptiveFeeTier":
+      return database.query(buildSQL(ix.name, 12 - 2, 5 + 2, 0), [
+        txid,
+        order,
+        // data
+        ix.data.feeTierIndex,
+        ix.data.tickSpacing,
+        ix.data.defaultBaseFeeRate,
+        ix.data.filterPeriod,
+        ix.data.decayPeriod,
+        ix.data.reductionFactor,
+        ix.data.adaptiveFeeControlFactor,
+        ix.data.maxVolatilityAccumulator,
+        ix.data.tickGroupSize,
+        ix.data.majorSwapThresholdTicks,
+        // data as key
+        ix.data.initializePoolAuthority,
+        ix.data.delegatedFeeAuthority,
+        // key
+        ix.accounts.whirlpoolsConfig,
+        ix.accounts.adaptiveFeeTier,
+        ix.accounts.funder,
+        ix.accounts.feeAuthority,
+        ix.accounts.systemProgram,
+        // no transfer
+      ]);
+    case "initializePoolWithAdaptiveFee":
+      return database.query(buildSQL(ix.name, 2, 16, 0), [
+        txid,
+        order,
+        // data
+        BigInt(ix.data.initialSqrtPrice.toString()),
+        BigInt(ix.data.tradeEnableTimestamp.toString()),
+        // key
+        ix.accounts.whirlpoolsConfig,
+        ix.accounts.tokenMintA,
+        ix.accounts.tokenMintB,
+        ix.accounts.tokenBadgeA,
+        ix.accounts.tokenBadgeB,
+        ix.accounts.funder,
+        ix.accounts.initializePoolAuthority,
+        ix.accounts.whirlpool,
+        ix.accounts.oracle,
+        ix.accounts.tokenVaultA,
+        ix.accounts.tokenVaultB,
+        ix.accounts.adaptiveFeeTier,
+        ix.accounts.tokenProgramA,
+        ix.accounts.tokenProgramB,
+        ix.accounts.systemProgram,
+        ix.accounts.rent,
+        // no transfer
+      ]);  
     default:
       throw new Error("unknown whirlpool instruction name");
   }
