@@ -9,7 +9,9 @@ const WHIRLPOOL_PUBKEY = "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc";
 
 // Program data account is PDA based on program address, so it is constant for each program
 const WHIRLPOOL_PROGRAM_DATA_PUBKEY = "CtXfPzz36dH5Ws4UYKZvrQ1Xqzn42ecDW6y8NKuiN8nD";
-const WHIRLPOOL_PROGRAM_DATA_ACCOUNT_SIZE = 1405485;
+const WHIRLPOOL_PROGRAM_DATA_ELF_MIN_SIZE = 1024 * 1024; // 1MB
+const WHIRLPOOL_PROGRAM_DATA_ACCOUNT_HEADER_SIZE = 45;
+const WHIRLPOOL_PROGRAM_DATA_ACCOUNT_MIN_SIZE = WHIRLPOOL_PROGRAM_DATA_ELF_MIN_SIZE + WHIRLPOOL_PROGRAM_DATA_ACCOUNT_HEADER_SIZE;
 
 const pubkeyLRUCache = new LRUCache<string, boolean>({ max: 10_000 });
 
@@ -1498,7 +1500,7 @@ async function fetchProgramData(
   //   - 8  bytes: last modified slot (u64)
   //   - 33 bytes: Option<Pubkey> (upgrade authority)
   const dataBuffer = Buffer.from(response.data.result.value.data[0], "base64");
-  invariant(dataBuffer.length === WHIRLPOOL_PROGRAM_DATA_ACCOUNT_SIZE, `data length must be ${WHIRLPOOL_PROGRAM_DATA_ACCOUNT_SIZE}`);
+  invariant(dataBuffer.length >= WHIRLPOOL_PROGRAM_DATA_ACCOUNT_MIN_SIZE, `data length must be at least ${WHIRLPOOL_PROGRAM_DATA_ACCOUNT_MIN_SIZE}`);
   const accountDiscriminator = dataBuffer.readUInt32LE(0);
   invariant(accountDiscriminator === 3, "account discriminator must be 3 (ProgramData)");
 
@@ -1512,6 +1514,108 @@ async function fetchProgramData(
     throw new Error(`lastModifiedSlot mismatch: ${slot} !== ${lastModifiedSlot}`);
   }
 
-  const programDataBuffer = dataBuffer.slice(45);
-  return programDataBuffer;
+  // Drop the first 45 bytes (header)
+  const programDataBuffer = dataBuffer.slice(WHIRLPOOL_PROGRAM_DATA_ACCOUNT_HEADER_SIZE);
+
+  // The program data account may be quite larger than the actual program data, so we need to find the actual size of the program data.
+  const elfUsedLength = getElfUsedLength(programDataBuffer);
+
+  // safe guard #1: minimum size check
+  invariant(elfUsedLength >= WHIRLPOOL_PROGRAM_DATA_ELF_MIN_SIZE, `elfUsedLength(${elfUsedLength}) must be at least ${WHIRLPOOL_PROGRAM_DATA_ELF_MIN_SIZE}`);
+  // safe guard #2: last non-zero byte check (we will never lost the last non-zero byte)
+  const lastNonZeroByteIndex = getLastNonZeroByteIndex(programDataBuffer);
+  invariant(lastNonZeroByteIndex < elfUsedLength, `lastNonZeroByteIndex(${lastNonZeroByteIndex}) must be less than elfUsedLength(${elfUsedLength})`);
+
+  return programDataBuffer.slice(0, elfUsedLength);
+}
+
+function getLastNonZeroByteIndex(buffer: Buffer): number {
+  let lastNonZeroByteIndex = buffer.length - 1;
+  while (lastNonZeroByteIndex >= 0 && buffer[lastNonZeroByteIndex] === 0) {
+    lastNonZeroByteIndex--;
+  }
+  return lastNonZeroByteIndex;
+}
+
+function getElfUsedLength(buffer: Buffer): number {
+  const ELF_HEADER_SIZE = 64;
+  const ELF_MAGIC = [0x7f, 0x45, 0x4c, 0x46]; // 0x7f 'E' 'L' 'F'
+  const ELF_CLASS_ELF64 = 0x02;
+  const ELF_ENDIANESS_LITTLE = 0x01;
+
+  invariant(buffer.length >= ELF_HEADER_SIZE, `buffer length must be at least ${ELF_HEADER_SIZE} bytes`);
+  invariant(ELF_MAGIC.every((b, i) => buffer[i] === b), "Not an ELF file image");
+  invariant(buffer[4] === ELF_CLASS_ELF64, "Only 64-bit ELF is supported");
+  invariant(buffer[5] === ELF_ENDIANESS_LITTLE, "Only little-endian ELF is supported");
+
+  const readU64 = (offset: number) => Number(buffer.readBigUInt64LE(offset)); // number range is safe in this context
+  const readU16 = (offset: number) => buffer.readUInt16LE(offset);
+
+  // Offsets in ELF64 header
+  const e_phoff = readU64(32);
+  const e_shoff = readU64(40);
+  const e_phentsize = readU16(54);
+  const e_phnum = readU16(56);
+  const e_shentsize = readU16(58);
+  const e_shnum = readU16(60);
+
+  // ELF File Layout
+  //
+  // +--------------------------------------+
+  // | ELF Header (64 bytes)                |
+  // |                                      |
+  // +--------------------------------------+
+  // | Program Header Table                 |
+  // |                                      |
+  // +--------------------------------------+
+  // | Data                                 |
+  // |                                      |
+  // +--------------------------------------+
+  // | Section Header Table                 |
+  // |                                      |
+  // +--------------------------------------+
+  //
+  // note: The Section Header Table contains information used by debuggers and other tools,
+  // and an ELF file can still be executed even if it does not include the Section Header Table.
+  // However, if the Section Header Table is present, it should definitely be included as part of the meaningful data.
+  //
+  // note: There is no such thing as "Section Data" corresponding directly to the Section Header Table;
+  // rather, the Section Header Table points to ranges of "Data" within the file.
+  // Therefore, it is perfectly normal for the ranges indicated by the Program Header Table and the Section Header Table to overlap.
+  
+  let maxEnd = 0;
+
+  // Program Header Table
+  for (let i = 0; i < e_phnum; i++) {
+      const offset = e_phoff + e_phentsize * i;
+      const p_offset = readU64(offset + 8);
+      const p_filesz = readU64(offset + 32);
+      const end = p_offset + p_filesz;
+      if (end > maxEnd) maxEnd = end;
+  }
+
+  // Program Header Table itself
+  const programHeaderTableEnd = e_phoff + e_phentsize * e_phnum;
+  if (programHeaderTableEnd > maxEnd) {
+      maxEnd = programHeaderTableEnd;
+  }
+
+  // Section Header Table
+  for (let i = 0; i < e_shnum; i++) {
+      const offset = e_shoff + e_shentsize * i;
+      const sh_offset = readU64(offset + 24);
+      const sh_size = readU64(offset + 32);
+      const end = sh_offset + sh_size;
+      if (end > maxEnd) maxEnd = end;
+  }
+
+  // Section Header Table itself
+  const sectionHeaderTableEnd = e_shoff + e_shentsize * e_shnum;
+  if (sectionHeaderTableEnd > maxEnd) {
+      maxEnd = sectionHeaderTableEnd;
+  }
+
+  invariant(maxEnd <= buffer.length, `maxEnd(${maxEnd}) must be less than or equal to buffer length${buffer.length}`);
+
+  return maxEnd;
 }
