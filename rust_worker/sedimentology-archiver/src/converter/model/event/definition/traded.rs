@@ -1,5 +1,5 @@
 use super::super::super::serde::{string_decimal_price, string_u128};
-use super::{DecimalPrice, PubkeyString, TransferInfo};
+use super::{AdaptiveFeeVariables, DecimalPrice, PubkeyString, TransferInfo};
 use serde_derive::{Serialize, Deserialize};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
@@ -41,6 +41,12 @@ pub struct TradedEventPayload {
     pub fee_rate: u16,
     #[serde(rename = "pfr")]
     pub protocol_fee_rate: u16,
+
+    // Adaptive Fee enabled pool only
+    #[serde(rename = "oafv", skip_serializing_if = "Option::is_none")]
+    pub old_adaptive_fee_variables: Option<AdaptiveFeeVariables>,
+    #[serde(rename = "nafv", skip_serializing_if = "Option::is_none")]
+    pub new_adaptive_fee_variables: Option<AdaptiveFeeVariables>,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]

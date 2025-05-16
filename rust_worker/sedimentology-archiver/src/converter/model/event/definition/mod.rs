@@ -1,3 +1,4 @@
+mod adaptive_fee_tier_initialized;
 mod config_extension_initialized;
 mod config_extension_updated;
 mod config_initialized;
@@ -29,6 +30,7 @@ mod token_badge_deleted;
 mod token_badge_initialized;
 mod traded;
 
+pub use adaptive_fee_tier_initialized::*;
 pub use config_extension_initialized::*;
 pub use config_extension_updated::*;
 pub use config_initialized::*;
@@ -99,4 +101,36 @@ pub enum TokenProgram {
     Token,
     #[serde(rename = "t2")]
     Token2022,
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
+pub struct AdaptiveFeeConstants {
+    #[serde(rename = "fp")]
+    pub filter_period: u16,
+    #[serde(rename = "dp")]
+    pub decay_period: u16,
+    #[serde(rename = "rf")]
+    pub reduction_factor: u16,
+    #[serde(rename = "afcf")]
+    pub adaptive_fee_control_factor: u32,
+    #[serde(rename = "mva")]
+    pub max_volatility_accumulator: u32,
+    #[serde(rename = "tgs")]
+    pub tick_group_size: u16,
+    #[serde(rename = "mstt")]
+    pub major_swap_threshold_ticks: u16,
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
+pub struct AdaptiveFeeVariables {
+    #[serde(rename = "lrut", with = "string_u64")]
+    pub last_reference_update_timestamp: u64,
+    #[serde(rename = "lmst", with = "string_u64")]
+    pub last_major_swap_timestamp: u64,
+    #[serde(rename = "vr")]
+    pub volatility_reference: u32,
+    #[serde(rename = "tgir")]
+    pub tick_group_index_reference: i32,
+    #[serde(rename = "va")]
+    pub volatility_accumulator: u32,
 }

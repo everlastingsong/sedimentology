@@ -26,6 +26,7 @@ impl WhirlpoolEventGroup {
                     | WhirlpoolEvent::ConfigExtensionInitialized(_)
                     | WhirlpoolEvent::ConfigExtensionUpdated(_)
                     | WhirlpoolEvent::FeeTierInitialized(_)
+                    | WhirlpoolEvent::AdaptiveFeeTierInitialized(_)
                     | WhirlpoolEvent::FeeTierUpdated(_)
                     | WhirlpoolEvent::TokenBadgeInitialized(_)
                     | WhirlpoolEvent::TokenBadgeDeleted(_)
