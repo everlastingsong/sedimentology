@@ -12,7 +12,7 @@ use super::{definition::*, WhirlpoolEvent};
 use anchor_lang::prelude::*;
 use whirlpool_base::{
     math::sqrt_price_from_tick_index,
-    state::{FeeTier, LockConfig, Position, Whirlpool, WhirlpoolsConfig, WhirlpoolsConfigExtension},
+    state::{FeeTier, AdaptiveFeeTier, Oracle, LockConfig, Position, Whirlpool, WhirlpoolsConfig, WhirlpoolsConfigExtension},
 };
 
 pub fn build_whirlpool_events(
@@ -30,6 +30,15 @@ pub fn build_whirlpool_events(
         DecodedWhirlpoolInstruction::Swap(params) => {
             let old_whirlpool = get_old_whirlpool(writable_account_snapshot, &params.key_whirlpool);
             let new_whirlpool = get_new_whirlpool(accounts, &params.key_whirlpool);
+
+            let (old_oracle, new_oracle) = if new_whirlpool.is_initialized_with_adaptive_fee_tier() {
+                (
+                    Some(get_old_oracle(writable_account_snapshot, &params.key_oracle)),
+                    Some(get_new_oracle(accounts, &params.key_oracle)),
+                )
+            } else {
+                (None, None)
+            };
 
             let (mint_in, mint_out) = if params.data_a_to_b {
                 (&old_whirlpool.token_mint_a, &old_whirlpool.token_mint_b)
@@ -71,11 +80,22 @@ pub fn build_whirlpool_events(
                 protocol_fee_rate: old_whirlpool.protocol_fee_rate,
                 transfer_in: from_v1_transfer(params.transfer_amount_0, mint_in, decimals),
                 transfer_out: from_v1_transfer(params.transfer_amount_1, mint_out, decimals),
+                old_adaptive_fee_variables: from_option_oracle(&old_oracle),
+                new_adaptive_fee_variables: from_option_oracle(&new_oracle),
             }));
         }
         DecodedWhirlpoolInstruction::SwapV2(params) => {
             let old_whirlpool = get_old_whirlpool(writable_account_snapshot, &params.key_whirlpool);
             let new_whirlpool = get_new_whirlpool(accounts, &params.key_whirlpool);
+
+            let (old_oracle, new_oracle) = if new_whirlpool.is_initialized_with_adaptive_fee_tier() {
+                (
+                    Some(get_old_oracle(writable_account_snapshot, &params.key_oracle)),
+                    Some(get_new_oracle(accounts, &params.key_oracle)),
+                )
+            } else {
+                (None, None)
+            };
 
             let (mint_in, mint_out) = if params.data_a_to_b {
                 (&old_whirlpool.token_mint_a, &old_whirlpool.token_mint_b)
@@ -117,12 +137,23 @@ pub fn build_whirlpool_events(
                 protocol_fee_rate: old_whirlpool.protocol_fee_rate,
                 transfer_in: from_v2_transfer(&params.transfer_0, mint_in, decimals),
                 transfer_out: from_v2_transfer(&params.transfer_1, mint_out, decimals),
+                old_adaptive_fee_variables: from_option_oracle(&old_oracle),
+                new_adaptive_fee_variables: from_option_oracle(&new_oracle),
             }));
         }
         DecodedWhirlpoolInstruction::TwoHopSwap(params) => {
             let old_whirlpool_one =
                 get_old_whirlpool(writable_account_snapshot, &params.key_whirlpool_one);
             let new_whirlpool_one = get_new_whirlpool(accounts, &params.key_whirlpool_one);
+
+            let (old_oracle_one, new_oracle_one) = if new_whirlpool_one.is_initialized_with_adaptive_fee_tier() {
+                (
+                    Some(get_old_oracle(writable_account_snapshot, &params.key_oracle_one)),
+                    Some(get_new_oracle(accounts, &params.key_oracle_one)),
+                )
+            } else {
+                (None, None)
+            };
 
             let (mint_in_one, mint_out_one) = if params.data_a_to_b_one {
                 (
@@ -170,11 +201,22 @@ pub fn build_whirlpool_events(
                 protocol_fee_rate: old_whirlpool_one.protocol_fee_rate,
                 transfer_in: from_v1_transfer(params.transfer_amount_0, mint_in_one, decimals),
                 transfer_out: from_v1_transfer(params.transfer_amount_1, mint_out_one, decimals),
+                old_adaptive_fee_variables: from_option_oracle(&old_oracle_one),
+                new_adaptive_fee_variables: from_option_oracle(&new_oracle_one),
             }));
 
             let old_whirlpool_two =
                 get_old_whirlpool(writable_account_snapshot, &params.key_whirlpool_two);
             let new_whirlpool_two = get_new_whirlpool(accounts, &params.key_whirlpool_two);
+
+            let (old_oracle_two, new_oracle_two) = if new_whirlpool_two.is_initialized_with_adaptive_fee_tier() {
+                (
+                    Some(get_old_oracle(writable_account_snapshot, &params.key_oracle_two)),
+                    Some(get_new_oracle(accounts, &params.key_oracle_two)),
+                )
+            } else {
+                (None, None)
+            };
 
             let (mint_in_two, mint_out_two) = if params.data_a_to_b_two {
                 (
@@ -222,12 +264,23 @@ pub fn build_whirlpool_events(
                 protocol_fee_rate: old_whirlpool_two.protocol_fee_rate,
                 transfer_in: from_v1_transfer(params.transfer_amount_2, mint_in_two, decimals),
                 transfer_out: from_v1_transfer(params.transfer_amount_3, mint_out_two, decimals),
+                old_adaptive_fee_variables: from_option_oracle(&old_oracle_two),
+                new_adaptive_fee_variables: from_option_oracle(&new_oracle_two),
             }));
         }
         DecodedWhirlpoolInstruction::TwoHopSwapV2(params) => {
             let old_whirlpool_one =
                 get_old_whirlpool(writable_account_snapshot, &params.key_whirlpool_one);
             let new_whirlpool_one = get_new_whirlpool(accounts, &params.key_whirlpool_one);
+
+            let (old_oracle_one, new_oracle_one) = if new_whirlpool_one.is_initialized_with_adaptive_fee_tier() {
+                (
+                    Some(get_old_oracle(writable_account_snapshot, &params.key_oracle_one)),
+                    Some(get_new_oracle(accounts, &params.key_oracle_one)),
+                )
+            } else {
+                (None, None)
+            };
 
             let (mint_in_one, mint_out_one) = if params.data_a_to_b_one {
                 (
@@ -275,11 +328,22 @@ pub fn build_whirlpool_events(
                 protocol_fee_rate: old_whirlpool_one.protocol_fee_rate,
                 transfer_in: from_v2_transfer(&params.transfer_0, mint_in_one, decimals),
                 transfer_out: from_v2_transfer(&params.transfer_1, mint_out_one, decimals),
+                old_adaptive_fee_variables: from_option_oracle(&old_oracle_one),
+                new_adaptive_fee_variables: from_option_oracle(&new_oracle_one),
             }));
 
             let old_whirlpool_two =
                 get_old_whirlpool(writable_account_snapshot, &params.key_whirlpool_two);
             let new_whirlpool_two = get_new_whirlpool(accounts, &params.key_whirlpool_two);
+
+            let (old_oracle_two, new_oracle_two) = if new_whirlpool_two.is_initialized_with_adaptive_fee_tier() {
+                (
+                    Some(get_old_oracle(writable_account_snapshot, &params.key_oracle_two)),
+                    Some(get_new_oracle(accounts, &params.key_oracle_two)),
+                )
+            } else {
+                (None, None)
+            };
 
             let (mint_in_two, mint_out_two) = if params.data_a_to_b_two {
                 (
@@ -327,6 +391,8 @@ pub fn build_whirlpool_events(
                 protocol_fee_rate: old_whirlpool_two.protocol_fee_rate,
                 transfer_in: from_v2_transfer(&params.transfer_1, mint_in_two, decimals),
                 transfer_out: from_v2_transfer(&params.transfer_2, mint_out_two, decimals),
+                old_adaptive_fee_variables: from_option_oracle(&old_oracle_two),
+                new_adaptive_fee_variables: from_option_oracle(&new_oracle_two),
             }));
         }
         ////////////////////////////////////////////////////////////////////////////////
@@ -552,7 +618,7 @@ pub fn build_whirlpool_events(
             ));
         }
         ////////////////////////////////////////////////////////////////////////////////
-        // PoolInitialized: InitializePool, InitializePoolV2
+        // PoolInitialized: InitializePool, InitializePoolV2, InitializePoolWithAdaptiveFee
         ////////////////////////////////////////////////////////////////////////////////
         DecodedWhirlpoolInstruction::InitializePool(params) => {
             let new_whirlpool = get_new_whirlpool(accounts, &params.key_whirlpool);
@@ -581,6 +647,9 @@ pub fn build_whirlpool_events(
                     token_decimals_b: get_decimals(&params.key_token_mint_b, decimals),
                     fee_rate: new_whirlpool.fee_rate,
                     protocol_fee_rate: new_whirlpool.protocol_fee_rate,
+                    fee_tier_index: None,
+                    trade_enable_timestamp: None,
+                    adaptive_fee_constants: None,
                 },
             ));
         }
@@ -611,6 +680,51 @@ pub fn build_whirlpool_events(
                     token_decimals_b: get_decimals(&params.key_token_mint_b, decimals),
                     fee_rate: new_whirlpool.fee_rate,
                     protocol_fee_rate: new_whirlpool.protocol_fee_rate,
+                    fee_tier_index: None,
+                    trade_enable_timestamp: None,
+                    adaptive_fee_constants: None,
+                },
+            ));
+        }
+        DecodedWhirlpoolInstruction::InitializePoolWithAdaptiveFee(params) => {
+            let new_whirlpool = get_new_whirlpool(accounts, &params.key_whirlpool);
+            let new_oracle = get_new_oracle(accounts, &params.key_oracle);
+
+            events.push(WhirlpoolEvent::PoolInitialized(
+                PoolInitializedEventPayload {
+                    origin: PoolInitializedEventOrigin::InitializePoolWithAdaptiveFee,
+                    tick_spacing: new_whirlpool.tick_spacing,
+                    sqrt_price: params.data_initial_sqrt_price,
+                    decimal_price: sqrt_price_to_decimal_price(
+                        params.data_initial_sqrt_price,
+                        &new_whirlpool.token_mint_a,
+                        &new_whirlpool.token_mint_b,
+                        decimals,
+                    ),
+                    current_tick_index: new_whirlpool.tick_current_index,
+                    config: params.key_whirlpools_config.clone(),
+                    token_mint_a: params.key_token_mint_a.clone(),
+                    token_mint_b: params.key_token_mint_b.clone(),
+                    funder: params.key_funder.clone(),
+                    whirlpool: params.key_whirlpool.clone(),
+                    fee_tier: params.key_adaptive_fee_tier.clone(),
+                    token_program_a: get_token_program(&params.key_token_program_a),
+                    token_program_b: get_token_program(&params.key_token_program_b),
+                    token_decimals_a: get_decimals(&params.key_token_mint_a, decimals),
+                    token_decimals_b: get_decimals(&params.key_token_mint_b, decimals),
+                    fee_rate: new_whirlpool.fee_rate,
+                    protocol_fee_rate: new_whirlpool.protocol_fee_rate,
+                    fee_tier_index: Some(new_whirlpool.fee_tier_index()),
+                    trade_enable_timestamp: Some(params.data_trade_enable_timestamp),
+                    adaptive_fee_constants: Some(AdaptiveFeeConstants {
+                        filter_period: new_oracle.adaptive_fee_constants.filter_period,
+                        decay_period: new_oracle.adaptive_fee_constants.decay_period,
+                        reduction_factor: new_oracle.adaptive_fee_constants.reduction_factor,
+                        adaptive_fee_control_factor: new_oracle.adaptive_fee_constants.adaptive_fee_control_factor,
+                        max_volatility_accumulator: new_oracle.adaptive_fee_constants.max_volatility_accumulator,
+                        tick_group_size: new_oracle.adaptive_fee_constants.tick_group_size,
+                        major_swap_threshold_ticks: new_oracle.adaptive_fee_constants.major_swap_threshold_ticks,
+                    }),
                 },
             ));
         }
@@ -1567,6 +1681,32 @@ pub fn build_whirlpool_events(
             ));
         }
         ////////////////////////////////////////////////////////////////////////////////
+        // AdaptiveFeeTierInitialized: InitializeAdaptiveFeeTier
+        ////////////////////////////////////////////////////////////////////////////////
+        DecodedWhirlpoolInstruction::InitializeAdaptiveFeeTier(params) => {
+            events.push(WhirlpoolEvent::AdaptiveFeeTierInitialized(
+                AdaptiveFeeTierInitializedEventPayload {
+                    origin: AdaptiveFeeTierInitializedEventOrigin::InitializeAdaptiveFeeTier,
+                    config: params.key_whirlpools_config.clone(),
+                    adaptive_fee_tier: params.key_adaptive_fee_tier.clone(),
+                    fee_tier_index: params.data_fee_tier_index,
+                    tick_spacing: params.data_tick_spacing,
+                    initialize_pool_authority: params.data_initialize_pool_authority.clone(),
+                    delegated_fee_authority: params.data_delegated_fee_authority.clone(),
+                    default_base_fee_rate: params.data_default_base_fee_rate,
+                    adaptive_fee_constants: AdaptiveFeeConstants {
+                        filter_period: params.data_filter_period,
+                        decay_period: params.data_decay_period,
+                        reduction_factor: params.data_reduction_factor,
+                        adaptive_fee_control_factor: params.data_adaptive_fee_control_factor,
+                        max_volatility_accumulator: params.data_max_volatility_accumulator,
+                        tick_group_size: params.data_tick_group_size,
+                        major_swap_threshold_ticks: params.data_major_swap_threshold_ticks,
+                    },
+                },
+            ));
+        }
+        ////////////////////////////////////////////////////////////////////////////////
         // LiquidityPatched: AdminIncreaseLiquidity
         ////////////////////////////////////////////////////////////////////////////////
         DecodedWhirlpoolInstruction::AdminIncreaseLiquidity(params) => {
@@ -1692,6 +1832,44 @@ fn get_old_fee_tier(
 fn get_new_fee_tier(accounts: &AccountDataStore, pubkey: &PubkeyString) -> FeeTier {
     let post_data = accounts.get(pubkey).unwrap().unwrap();
     FeeTier::try_deserialize(&mut post_data.as_slice()).unwrap()
+}
+
+fn get_old_adaptive_fee_tier(
+    writable_account_snapshot: &WritableAccountSnapshot,
+    pubkey: &PubkeyString,
+) -> AdaptiveFeeTier {
+    let pre_data = writable_account_snapshot.pre_snapshot.get(pubkey).unwrap();
+    AdaptiveFeeTier::try_deserialize(&mut pre_data.as_slice()).unwrap()
+}
+
+fn get_new_adaptive_fee_tier(accounts: &AccountDataStore, pubkey: &PubkeyString) -> AdaptiveFeeTier {
+    let post_data = accounts.get(pubkey).unwrap().unwrap();
+    AdaptiveFeeTier::try_deserialize(&mut post_data.as_slice()).unwrap()
+}
+
+fn get_old_oracle(
+    writable_account_snapshot: &WritableAccountSnapshot,
+    pubkey: &PubkeyString,
+) -> Oracle {
+    let pre_data = writable_account_snapshot.pre_snapshot.get(pubkey).unwrap();
+    Oracle::try_deserialize(&mut pre_data.as_slice()).unwrap()
+}
+
+fn get_new_oracle(accounts: &AccountDataStore, pubkey: &PubkeyString) -> Oracle {
+    let post_data = accounts.get(pubkey).unwrap().unwrap();
+    Oracle::try_deserialize(&mut post_data.as_slice()).unwrap()
+}
+
+fn from_option_oracle(oracle: &Option<Oracle>) -> Option<AdaptiveFeeVariables> {
+    oracle.as_ref().map(|oracle| {
+        AdaptiveFeeVariables {
+            last_reference_update_timestamp: oracle.adaptive_fee_variables.last_reference_update_timestamp,
+            last_major_swap_timestamp: oracle.adaptive_fee_variables.last_major_swap_timestamp,
+            volatility_accumulator: oracle.adaptive_fee_variables.volatility_accumulator,
+            tick_group_index_reference: oracle.adaptive_fee_variables.tick_group_index_reference,
+            volatility_reference: oracle.adaptive_fee_variables.volatility_reference,
+        }
+    })
 }
 
 fn get_old_config_extension(
