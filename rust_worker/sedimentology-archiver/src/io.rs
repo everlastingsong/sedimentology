@@ -191,6 +191,8 @@ pub fn export_token(yyyymmdd_date: u32, file: &String, database: &mut PooledConn
           UNION SELECT keyTokenMintB mint FROM ixsInitializePool WHERE txid <= :e
           UNION SELECT keyTokenMintA mint FROM ixsInitializePoolV2 WHERE txid <= :e
           UNION SELECT keyTokenMintB mint FROM ixsInitializePoolV2 WHERE txid <= :e
+          UNION SELECT keyTokenMintA mint FROM ixsInitializePoolWithAdaptiveFee WHERE txid <= :e
+          UNION SELECT keyTokenMintB mint FROM ixsInitializePoolWithAdaptiveFee WHERE txid <= :e
           UNION SELECT keyRewardMint mint FROM ixsInitializeReward WHERE txid <= :e
           UNION SELECT keyRewardMint mint FROM ixsInitializeRewardV2 WHERE txid <= :e
       ) mints
