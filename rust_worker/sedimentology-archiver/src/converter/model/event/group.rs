@@ -28,6 +28,7 @@ impl WhirlpoolEventGroup {
                     | WhirlpoolEvent::FeeTierInitialized(_)
                     | WhirlpoolEvent::AdaptiveFeeTierInitialized(_)
                     | WhirlpoolEvent::FeeTierUpdated(_)
+                    | WhirlpoolEvent::AdaptiveFeeTierUpdated(_)
                     | WhirlpoolEvent::TokenBadgeInitialized(_)
                     | WhirlpoolEvent::TokenBadgeDeleted(_)
                     | WhirlpoolEvent::TickArrayInitialized(_)

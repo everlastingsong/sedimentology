@@ -12,10 +12,10 @@ version = "0.0.1"
 edition = "2021"
 
 [workspace.dependencies]
-#replay-engine = { git = "https://github.com/orca-so/whirlpool-tx-replayer", tag = "v0.1.8", package = "replay-engine" }
-#whirlpool-replayer = { git = "https://github.com/orca-so/whirlpool-tx-replayer", tag = "v0.1.8", package = "whirlpool-replayer" }
-replay-engine = { git = "https://github.com/orca-so/whirlpool-tx-replayer", branch = "yugure/adaptive-fee-step1", package = "replay-engine" }
-whirlpool-replayer = { git = "https://github.com/orca-so/whirlpool-tx-replayer", branch = "yugure/adaptive-fee-step1", package = "whirlpool-replayer" }
+replay-engine = { git = "https://github.com/orca-so/whirlpool-tx-replayer", tag = "v0.1.9", package = "replay-engine" }
+whirlpool-replayer = { git = "https://github.com/orca-so/whirlpool-tx-replayer", tag = "v0.1.9", package = "whirlpool-replayer" }
+#replay-engine = { git = "https://github.com/orca-so/whirlpool-tx-replayer", branch = "yugure/adaptive-fee-step1", package = "replay-engine" }
+#whirlpool-replayer = { git = "https://github.com/orca-so/whirlpool-tx-replayer", branch = "yugure/adaptive-fee-step1", package = "whirlpool-replayer" }
 
 whirlpool_base = { git = "https://github.com/orca-so/whirlpools", branch = "yugure/for-replayer-20250516", package = "whirlpool" }
 

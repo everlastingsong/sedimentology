@@ -1319,7 +1319,7 @@ pub fn build_whirlpool_events(
             ));
         }
         ////////////////////////////////////////////////////////////////////////////////
-        // PoolFeeRateUpdated: SetFeeRate
+        // PoolFeeRateUpdated: SetFeeRate, SetFeeRateByDelegatedFeeAuthority
         ////////////////////////////////////////////////////////////////////////////////
         DecodedWhirlpoolInstruction::SetFeeRate(params) => {
             let old_whirlpool = get_old_whirlpool(writable_account_snapshot, &params.key_whirlpool);
@@ -1329,6 +1329,20 @@ pub fn build_whirlpool_events(
                 PoolFeeRateUpdatedEventPayload {
                     origin: PoolFeeRateUpdatedEventOrigin::SetFeeRate,
                     config: params.key_whirlpools_config.clone(),
+                    whirlpool: params.key_whirlpool.clone(),
+                    old_fee_rate: old_whirlpool.fee_rate,
+                    new_fee_rate: new_whirlpool.fee_rate,
+                },
+            ));
+        }
+        DecodedWhirlpoolInstruction::SetFeeRateByDelegatedFeeAuthority(params) => {
+            let old_whirlpool = get_old_whirlpool(writable_account_snapshot, &params.key_whirlpool);
+            let new_whirlpool = get_new_whirlpool(accounts, &params.key_whirlpool);
+
+            events.push(WhirlpoolEvent::PoolFeeRateUpdated(
+                PoolFeeRateUpdatedEventPayload {
+                    origin: PoolFeeRateUpdatedEventOrigin::SetFeeRateByDelegatedFeeAuthority,
+                    config: old_whirlpool.whirlpools_config.to_string(),
                     whirlpool: params.key_whirlpool.clone(),
                     old_fee_rate: old_whirlpool.fee_rate,
                     new_fee_rate: new_whirlpool.fee_rate,
@@ -1707,6 +1721,137 @@ pub fn build_whirlpool_events(
             ));
         }
         ////////////////////////////////////////////////////////////////////////////////
+        // AdaptiveFeeTierUpdated: SetInitializePoolAuthority, SetDelegatedFeeAuthority, SetDefaultBaseFeeRate, SetPresetAdaptiveFeeConstants
+        ////////////////////////////////////////////////////////////////////////////////
+        DecodedWhirlpoolInstruction::SetInitializePoolAuthority(params) => {
+            let old_adaptive_fee_tier =
+                get_old_adaptive_fee_tier(writable_account_snapshot, &params.key_adaptive_fee_tier);
+            let new_adaptive_fee_tier =
+                get_new_adaptive_fee_tier(accounts, &params.key_adaptive_fee_tier);
+
+            events.push(WhirlpoolEvent::AdaptiveFeeTierUpdated(
+                AdaptiveFeeTierUpdatedEventPayload {
+                    origin: AdaptiveFeeTierUpdatedEventOrigin::SetInitializePoolAuthority,
+                    config: params.key_whirlpools_config.clone(),
+                    adaptive_fee_tier: params.key_adaptive_fee_tier.clone(),
+                    fee_tier_index: old_adaptive_fee_tier.fee_tier_index,
+                    tick_spacing: old_adaptive_fee_tier.tick_spacing,
+                    old_initialize_pool_authority: old_adaptive_fee_tier
+                        .initialize_pool_authority
+                        .to_string(),
+                    new_initialize_pool_authority: new_adaptive_fee_tier
+                        .initialize_pool_authority
+                        .to_string(),
+                    old_delegated_fee_authority: old_adaptive_fee_tier
+                        .delegated_fee_authority
+                        .to_string(),
+                    new_delegated_fee_authority: new_adaptive_fee_tier
+                        .delegated_fee_authority
+                        .to_string(),
+                    old_default_base_fee_rate: old_adaptive_fee_tier.default_base_fee_rate,
+                    new_default_base_fee_rate: new_adaptive_fee_tier.default_base_fee_rate,
+                    old_adaptive_fee_constants: to_adaptive_fee_constants(&old_adaptive_fee_tier),
+                    new_adaptive_fee_constants: to_adaptive_fee_constants(&new_adaptive_fee_tier),
+                },
+            ));
+        }
+        DecodedWhirlpoolInstruction::SetDelegatedFeeAuthority(params) => {
+            let old_adaptive_fee_tier =
+                get_old_adaptive_fee_tier(writable_account_snapshot, &params.key_adaptive_fee_tier);
+            let new_adaptive_fee_tier =
+                get_new_adaptive_fee_tier(accounts, &params.key_adaptive_fee_tier);
+
+            events.push(WhirlpoolEvent::AdaptiveFeeTierUpdated(
+                AdaptiveFeeTierUpdatedEventPayload {
+                    origin: AdaptiveFeeTierUpdatedEventOrigin::SetDelegatedFeeAuthority,
+                    config: params.key_whirlpools_config.clone(),
+                    adaptive_fee_tier: params.key_adaptive_fee_tier.clone(),
+                    fee_tier_index: old_adaptive_fee_tier.fee_tier_index,
+                    tick_spacing: old_adaptive_fee_tier.tick_spacing,
+                    old_initialize_pool_authority: old_adaptive_fee_tier
+                        .initialize_pool_authority
+                        .to_string(),
+                    new_initialize_pool_authority: new_adaptive_fee_tier
+                        .initialize_pool_authority
+                        .to_string(),
+                    old_delegated_fee_authority: old_adaptive_fee_tier
+                        .delegated_fee_authority
+                        .to_string(),
+                    new_delegated_fee_authority: new_adaptive_fee_tier
+                        .delegated_fee_authority
+                        .to_string(),
+                    old_default_base_fee_rate: old_adaptive_fee_tier.default_base_fee_rate,
+                    new_default_base_fee_rate: new_adaptive_fee_tier.default_base_fee_rate,
+                    old_adaptive_fee_constants: to_adaptive_fee_constants(&old_adaptive_fee_tier),
+                    new_adaptive_fee_constants: to_adaptive_fee_constants(&new_adaptive_fee_tier),
+                },
+            ));
+        }
+        DecodedWhirlpoolInstruction::SetDefaultBaseFeeRate(params) => {
+            let old_adaptive_fee_tier =
+                get_old_adaptive_fee_tier(writable_account_snapshot, &params.key_adaptive_fee_tier);
+            let new_adaptive_fee_tier =
+                get_new_adaptive_fee_tier(accounts, &params.key_adaptive_fee_tier);
+
+            events.push(WhirlpoolEvent::AdaptiveFeeTierUpdated(
+                AdaptiveFeeTierUpdatedEventPayload {
+                    origin: AdaptiveFeeTierUpdatedEventOrigin::SetDefaultBaseFeeRate,
+                    config: params.key_whirlpools_config.clone(),
+                    adaptive_fee_tier: params.key_adaptive_fee_tier.clone(),
+                    fee_tier_index: old_adaptive_fee_tier.fee_tier_index,
+                    tick_spacing: old_adaptive_fee_tier.tick_spacing,
+                    old_initialize_pool_authority: old_adaptive_fee_tier
+                        .initialize_pool_authority
+                        .to_string(),
+                    new_initialize_pool_authority: new_adaptive_fee_tier
+                        .initialize_pool_authority
+                        .to_string(),
+                    old_delegated_fee_authority: old_adaptive_fee_tier
+                        .delegated_fee_authority
+                        .to_string(),
+                    new_delegated_fee_authority: new_adaptive_fee_tier
+                        .delegated_fee_authority
+                        .to_string(),
+                    old_default_base_fee_rate: old_adaptive_fee_tier.default_base_fee_rate,
+                    new_default_base_fee_rate: new_adaptive_fee_tier.default_base_fee_rate,
+                    old_adaptive_fee_constants: to_adaptive_fee_constants(&old_adaptive_fee_tier),
+                    new_adaptive_fee_constants: to_adaptive_fee_constants(&new_adaptive_fee_tier),
+                },
+            ));
+        }
+        DecodedWhirlpoolInstruction::SetPresetAdaptiveFeeConstants(params) => {
+            let old_adaptive_fee_tier =
+                get_old_adaptive_fee_tier(writable_account_snapshot, &params.key_adaptive_fee_tier);
+            let new_adaptive_fee_tier =
+                get_new_adaptive_fee_tier(accounts, &params.key_adaptive_fee_tier);
+
+            events.push(WhirlpoolEvent::AdaptiveFeeTierUpdated(
+                AdaptiveFeeTierUpdatedEventPayload {
+                    origin: AdaptiveFeeTierUpdatedEventOrigin::SetPresetAdaptiveFeeConstants,
+                    config: params.key_whirlpools_config.clone(),
+                    adaptive_fee_tier: params.key_adaptive_fee_tier.clone(),
+                    fee_tier_index: old_adaptive_fee_tier.fee_tier_index,
+                    tick_spacing: old_adaptive_fee_tier.tick_spacing,
+                    old_initialize_pool_authority: old_adaptive_fee_tier
+                        .initialize_pool_authority
+                        .to_string(),
+                    new_initialize_pool_authority: new_adaptive_fee_tier
+                        .initialize_pool_authority
+                        .to_string(),
+                    old_delegated_fee_authority: old_adaptive_fee_tier
+                        .delegated_fee_authority
+                        .to_string(),
+                    new_delegated_fee_authority: new_adaptive_fee_tier
+                        .delegated_fee_authority
+                        .to_string(),
+                    old_default_base_fee_rate: old_adaptive_fee_tier.default_base_fee_rate,
+                    new_default_base_fee_rate: new_adaptive_fee_tier.default_base_fee_rate,
+                    old_adaptive_fee_constants: to_adaptive_fee_constants(&old_adaptive_fee_tier),
+                    new_adaptive_fee_constants: to_adaptive_fee_constants(&new_adaptive_fee_tier),
+                },
+            ));
+        }
+        ////////////////////////////////////////////////////////////////////////////////
         // LiquidityPatched: AdminIncreaseLiquidity
         ////////////////////////////////////////////////////////////////////////////////
         DecodedWhirlpoolInstruction::AdminIncreaseLiquidity(params) => {
@@ -1929,4 +2074,18 @@ fn sqrt_price_to_decimal_price(
 
     let (i, scale) = price.as_bigint_and_exponent();
     BigDecimal::new(i, scale - (decimals_a - decimals_b))
+}
+
+fn to_adaptive_fee_constants(
+    adaptive_fee_tier: &AdaptiveFeeTier,
+) -> AdaptiveFeeConstants {
+    AdaptiveFeeConstants {
+        filter_period: adaptive_fee_tier.filter_period,
+        decay_period: adaptive_fee_tier.decay_period,
+        reduction_factor: adaptive_fee_tier.reduction_factor,
+        adaptive_fee_control_factor: adaptive_fee_tier.adaptive_fee_control_factor,
+        max_volatility_accumulator: adaptive_fee_tier.max_volatility_accumulator,
+        tick_group_size: adaptive_fee_tier.tick_group_size,
+        major_swap_threshold_ticks: adaptive_fee_tier.major_swap_threshold_ticks,
+    }
 }
