@@ -22,4 +22,6 @@ pub struct PoolFeeRateUpdatedEventPayload {
 pub enum PoolFeeRateUpdatedEventOrigin {
     #[serde(rename = "sfr")]
     SetFeeRate,
+    #[serde(rename = "sfrbdfa")]
+    SetFeeRateByDelegatedFeeAuthority
 }

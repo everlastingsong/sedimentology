@@ -1,4 +1,5 @@
 mod adaptive_fee_tier_initialized;
+mod adaptive_fee_tier_updated;
 mod config_extension_initialized;
 mod config_extension_updated;
 mod config_initialized;
@@ -31,6 +32,7 @@ mod token_badge_initialized;
 mod traded;
 
 pub use adaptive_fee_tier_initialized::*;
+pub use adaptive_fee_tier_updated::*;
 pub use config_extension_initialized::*;
 pub use config_extension_updated::*;
 pub use config_initialized::*;

@@ -136,6 +136,8 @@ pub enum WhirlpoolEvent {
     FeeTierUpdated(FeeTierUpdatedEventPayload),
     #[serde(rename = "AFTI")]
     AdaptiveFeeTierInitialized(AdaptiveFeeTierInitializedEventPayload),
+    #[serde(rename = "AFTU")]
+    AdaptiveFeeTierUpdated(AdaptiveFeeTierUpdatedEventPayload),
 
     // ConfigExtension
     #[serde(rename = "CEI")]
