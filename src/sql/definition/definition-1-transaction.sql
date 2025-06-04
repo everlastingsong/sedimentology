@@ -1003,6 +1003,62 @@ CREATE TABLE `ixsInitializePoolWithAdaptiveFee` (
   PRIMARY KEY (`txid`,`order`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
+CREATE TABLE `ixsSetInitializePoolAuthority` (
+  `txid` bigint(11) unsigned NOT NULL,
+  `order` tinyint(11) unsigned NOT NULL,
+  `keyWhirlpoolsConfig` int(11) unsigned NOT NULL,
+  `keyAdaptiveFeeTier` int(11) unsigned NOT NULL,
+  `keyFeeAuthority` int(11) unsigned NOT NULL,
+  `keyNewInitializePoolAuthority` int(11) unsigned NOT NULL,
+  PRIMARY KEY (`txid`,`order`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+
+CREATE TABLE `ixsSetDelegatedFeeAuthority` (
+  `txid` bigint(11) unsigned NOT NULL,
+  `order` tinyint(11) unsigned NOT NULL,
+  `keyWhirlpoolsConfig` int(11) unsigned NOT NULL,
+  `keyAdaptiveFeeTier` int(11) unsigned NOT NULL,
+  `keyFeeAuthority` int(11) unsigned NOT NULL,
+  `keyNewDelegatedFeeAuthority` int(11) unsigned NOT NULL,
+  PRIMARY KEY (`txid`,`order`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+
+CREATE TABLE `ixsSetDefaultBaseFeeRate` (
+  `txid` bigint(11) unsigned NOT NULL,
+  `order` tinyint(11) unsigned NOT NULL,
+  `dataDefaultBaseFeeRate` smallint(11) unsigned NOT NULL COMMENT 'u16',
+  `keyWhirlpoolsConfig` int(11) unsigned NOT NULL,
+  `keyAdaptiveFeeTier` int(11) unsigned NOT NULL,
+  `keyFeeAuthority` int(11) unsigned NOT NULL,
+  PRIMARY KEY (`txid`,`order`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+
+CREATE TABLE `ixsSetFeeRateByDelegatedFeeAuthority` (
+  `txid` bigint(11) unsigned NOT NULL,
+  `order` tinyint(11) unsigned NOT NULL,
+  `dataFeeRate` smallint(11) unsigned NOT NULL COMMENT 'u16',
+  `keyWhirlpool` int(11) unsigned NOT NULL,
+  `keyAdaptiveFeeTier` int(11) unsigned NOT NULL,
+  `keyDelegatedFeeAuthority` int(11) unsigned NOT NULL,
+  PRIMARY KEY (`txid`,`order`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+
+CREATE TABLE `ixsSetPresetAdaptiveFeeConstants` (
+  `txid` bigint(11) unsigned NOT NULL,
+  `order` tinyint(11) unsigned NOT NULL,
+  `dataFilterPeriod` smallint(11) unsigned NOT NULL COMMENT 'u16',
+  `dataDecayPeriod` smallint(11) unsigned NOT NULL COMMENT 'u16',
+  `dataReductionFactor` smallint(11) unsigned NOT NULL COMMENT 'u16',
+  `dataAdaptiveFeeControlFactor` int(11) unsigned NOT NULL COMMENT 'u32',
+  `dataMaxVolatilityAccumulator` int(11) unsigned NOT NULL COMMENT 'u32',
+  `dataTickGroupSize` smallint(11) unsigned NOT NULL COMMENT 'u16',
+  `dataMajorSwapThresholdTicks` smallint(11) unsigned NOT NULL COMMENT 'u16',
+  `keyWhirlpoolsConfig` int(11) unsigned NOT NULL,
+  `keyAdaptiveFeeTier` int(11) unsigned NOT NULL,
+  `keyFeeAuthority` int(11) unsigned NOT NULL,
+  PRIMARY KEY (`txid`,`order`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+
 --
 -- PROCEDURE
 --

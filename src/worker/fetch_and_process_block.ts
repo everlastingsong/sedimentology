@@ -279,6 +279,11 @@ export async function fetchAndProcessBlock(database: Connection, solana: AxiosIn
         case "resetPositionRange":
         case "transferLockedPosition":
         case "initializeAdaptiveFeeTier":
+        case "setInitializePoolAuthority":
+        case "setDelegatedFeeAuthority":
+        case "setDefaultBaseFeeRate":
+        case "setFeeRateByDelegatedFeeAuthority":
+        case "setPresetAdaptiveFeeConstants":
           // This instruction does not affect the token balance.
           break;
         default:
@@ -1448,7 +1453,73 @@ async function insertInstruction(txid: bigint, order: number, ix: DecodedWhirlpo
         ix.accounts.systemProgram,
         ix.accounts.rent,
         // no transfer
-      ]);  
+      ]);
+    case "setInitializePoolAuthority":
+      return database.query(buildSQL(ix.name, 0, 4, 0), [
+        txid,
+        order,
+        // no data
+        // key
+        ix.accounts.whirlpoolsConfig,
+        ix.accounts.adaptiveFeeTier,
+        ix.accounts.feeAuthority,
+        ix.accounts.newInitializePoolAuthority,
+        // no transfer
+      ]);
+    case "setDelegatedFeeAuthority":
+      return database.query(buildSQL(ix.name, 0, 4, 0), [
+        txid,
+        order,
+        // no data
+        // key
+        ix.accounts.whirlpoolsConfig,
+        ix.accounts.adaptiveFeeTier,
+        ix.accounts.feeAuthority,
+        ix.accounts.newDelegatedFeeAuthority,
+        // no transfer
+      ]);
+    case "setDefaultBaseFeeRate":
+      return database.query(buildSQL(ix.name, 1, 3, 0), [
+        txid,
+        order,
+        // data
+        ix.data.defaultBaseFeeRate,
+        // key
+        ix.accounts.whirlpoolsConfig,
+        ix.accounts.adaptiveFeeTier,
+        ix.accounts.feeAuthority,
+        // no transfer
+      ]);
+    case "setFeeRateByDelegatedFeeAuthority":
+      return database.query(buildSQL(ix.name, 1, 3, 0), [
+        txid,
+        order,
+        // data
+        ix.data.feeRate,
+        // key
+        ix.accounts.whirlpool,
+        ix.accounts.adaptiveFeeTier,
+        ix.accounts.delegatedFeeAuthority,
+        // no transfer
+      ]);
+    case "setPresetAdaptiveFeeConstants":
+      return database.query(buildSQL(ix.name, 7, 3, 0), [
+        txid,
+        order,
+        // data
+        ix.data.filterPeriod,
+        ix.data.decayPeriod,
+        ix.data.reductionFactor,
+        ix.data.adaptiveFeeControlFactor,
+        ix.data.maxVolatilityAccumulator,
+        ix.data.tickGroupSize,
+        ix.data.majorSwapThresholdTicks,
+        // key
+        ix.accounts.whirlpoolsConfig,
+        ix.accounts.adaptiveFeeTier,
+        ix.accounts.feeAuthority,
+        // no transfer
+      ]);
     default:
       throw new Error("unknown whirlpool instruction name");
   }

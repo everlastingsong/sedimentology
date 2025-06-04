@@ -1179,6 +1179,77 @@ SELECT
     ) AS "payload"
 FROM ixsInitializePoolWithAdaptiveFee t;
 
+CREATE OR REPLACE VIEW vwJsonIxsSetInitializePoolAuthority AS
+SELECT
+    t.txid,
+    t.order,
+    "setInitializePoolAuthority" AS "ix",
+    JSON_OBJECT(
+        'keyWhirlpoolsConfig', toPubkeyBase58(t.keyWhirlpoolsConfig),
+        'keyAdaptiveFeeTier', toPubkeyBase58(t.keyAdaptiveFeeTier),
+        'keyFeeAuthority', toPubkeyBase58(t.keyFeeAuthority),
+        'keyNewInitializePoolAuthority', toPubkeyBase58(t.keyNewInitializePoolAuthority)
+    ) AS "payload"
+FROM ixsSetInitializePoolAuthority t;
+
+CREATE OR REPLACE VIEW vwJsonIxsSetDelegatedFeeAuthority AS
+SELECT
+    t.txid,
+    t.order,
+    "setDelegatedFeeAuthority" AS "ix",
+    JSON_OBJECT(
+        'keyWhirlpoolsConfig', toPubkeyBase58(t.keyWhirlpoolsConfig),
+        'keyAdaptiveFeeTier', toPubkeyBase58(t.keyAdaptiveFeeTier),
+        'keyFeeAuthority', toPubkeyBase58(t.keyFeeAuthority),
+        'keyNewDelegatedFeeAuthority', toPubkeyBase58(t.keyNewDelegatedFeeAuthority)
+    ) AS "payload"
+FROM ixsSetDelegatedFeeAuthority t;
+
+CREATE OR REPLACE VIEW vwJsonIxsSetDefaultBaseFeeRate AS
+SELECT
+    t.txid,
+    t.order,
+    "setDefaultBaseFeeRate" AS "ix",
+    JSON_OBJECT(
+        'dataDefaultBaseFeeRate', t.dataDefaultBaseFeeRate,
+        'keyWhirlpoolsConfig', toPubkeyBase58(t.keyWhirlpoolsConfig),
+        'keyAdaptiveFeeTier', toPubkeyBase58(t.keyAdaptiveFeeTier),
+        'keyFeeAuthority', toPubkeyBase58(t.keyFeeAuthority)
+    ) AS "payload"
+FROM ixsSetDefaultBaseFeeRate t;
+
+CREATE OR REPLACE VIEW vwJsonIxsSetFeeRateByDelegatedFeeAuthority AS
+SELECT
+    t.txid,
+    t.order,
+    "setFeeRateByDelegatedFeeAuthority" AS "ix",
+    JSON_OBJECT(
+        'dataFeeRate', t.dataFeeRate,
+        'keyWhirlpool', toPubkeyBase58(t.keyWhirlpool),
+        'keyAdaptiveFeeTier', toPubkeyBase58(t.keyAdaptiveFeeTier),
+        'keyDelegatedFeeAuthority', toPubkeyBase58(t.keyDelegatedFeeAuthority)
+    ) AS "payload"
+FROM ixsSetFeeRateByDelegatedFeeAuthority t;
+
+CREATE OR REPLACE VIEW vwJsonIxsSetPresetAdaptiveFeeConstants AS
+SELECT
+    t.txid,
+    t.order,
+    "setPresetAdaptiveFeeConstants" AS "ix",
+    JSON_OBJECT(
+        'dataFilterPeriod', t.dataFilterPeriod,
+        'dataDecayPeriod', t.dataDecayPeriod,
+        'dataReductionFactor', t.dataReductionFactor,
+        'dataAdaptiveFeeControlFactor', t.dataAdaptiveFeeControlFactor,
+        'dataMaxVolatilityAccumulator', t.dataMaxVolatilityAccumulator,
+        'dataTickGroupSize', t.dataTickGroupSize,
+        'dataMajorSwapThresholdTicks', t.dataMajorSwapThresholdTicks,
+        'keyWhirlpoolsConfig', toPubkeyBase58(t.keyWhirlpoolsConfig),
+        'keyAdaptiveFeeTier', toPubkeyBase58(t.keyAdaptiveFeeTier),
+        'keyFeeAuthority', toPubkeyBase58(t.keyFeeAuthority)
+    ) AS "payload"
+FROM ixsSetPresetAdaptiveFeeConstants t;
+
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
 /*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
