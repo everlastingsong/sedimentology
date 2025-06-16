@@ -3814,8 +3814,8 @@ dependencies = [
 
 [[package]]
 name = "replay-engine"
-version = "0.1.9"
-source = "git+https://github.com/orca-so/whirlpool-tx-replayer?tag=v0.1.9#bab9aa2806aa230d15bd4f3aadfc630fa19fb23e"
+version = "0.1.10"
+source = "git+https://github.com/orca-so/whirlpool-tx-replayer?tag=v0.1.10#d9977da038621bf3dc646b15acbb2f5952dc7843"
 dependencies = [
  "anchor-client",
  "anchor-lang",
@@ -3842,7 +3842,7 @@ dependencies = [
  "tempfile",
  "thiserror",
  "tokio",
- "whirlpool",
+ "whirlpool 0.4.1 (git+https://github.com/orca-so/whirlpools?branch=yugure%2Ffor-replayer-20250616)",
 ]
 
 [[package]]
@@ -4212,7 +4212,7 @@ dependencies = [
  "serde",
  "serde_derive",
  "serde_json",
- "whirlpool",
+ "whirlpool 0.4.1 (git+https://github.com/orca-so/whirlpools?branch=yugure%2Ffor-replayer-20250516)",
  "whirlpool-replayer",
 ]
 
@@ -6648,9 +6648,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "whirlpool"
+version = "0.4.1"
+source = "git+https://github.com/orca-so/whirlpools?branch=yugure%2Ffor-replayer-20250616#02b7016a6df194ea4646a2c69e45f4fff6ca47b4"
+dependencies = [
+ "anchor-lang",
+ "anchor-spl",
+ "arrayref",
+ "borsh 0.9.3",
+ "bytemuck",
+ "solana-program",
+ "solana-security-txt",
+ "spl-token",
+ "spl-token-metadata-interface",
+ "spl-transfer-hook-interface 0.5.0",
+ "uint",
+]
+
+[[package]]
 name = "whirlpool-replayer"
-version = "0.1.9"
-source = "git+https://github.com/orca-so/whirlpool-tx-replayer?tag=v0.1.9#bab9aa2806aa230d15bd4f3aadfc630fa19fb23e"
+version = "0.1.10"
+source = "git+https://github.com/orca-so/whirlpool-tx-replayer?tag=v0.1.10#d9977da038621bf3dc646b15acbb2f5952dc7843"
 dependencies = [
  "base64 0.21.7",
  "bincode",
