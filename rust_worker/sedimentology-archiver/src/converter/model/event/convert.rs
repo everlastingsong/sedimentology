@@ -1367,7 +1367,7 @@ pub fn build_whirlpool_events(
             ));
         }
         ////////////////////////////////////////////////////////////////////////////////
-        // TickArrayInitialized: InitializeTickArray
+        // TickArrayInitialized: InitializeTickArray, InitializeDynamicTickArray
         ////////////////////////////////////////////////////////////////////////////////
         DecodedWhirlpoolInstruction::InitializeTickArray(params) => {
             events.push(WhirlpoolEvent::TickArrayInitialized(
@@ -1378,6 +1378,18 @@ pub fn build_whirlpool_events(
                     tick_array: params.key_tick_array.clone(),
                 },
             ));
+        }
+        DecodedWhirlpoolInstruction::InitializeDynamicTickArray(params) => {
+            if !is_already_initialized_dynamic_tick_array(writable_account_snapshot, &params.key_tick_array) {
+                events.push(WhirlpoolEvent::TickArrayInitialized(
+                    TickArrayInitializedEventPayload {
+                        origin: TickArrayInitializedEventOrigin::InitializeDynamicTickArray,
+                        whirlpool: params.key_whirlpool.clone(),
+                        start_tick_index: params.data_start_tick_index,
+                        tick_array: params.key_tick_array.clone(),
+                    },
+                ));
+            }
         }
         ////////////////////////////////////////////////////////////////////////////////
         // ConfigInitialized: InitializeConfig
@@ -2088,4 +2100,11 @@ fn to_adaptive_fee_constants(
         tick_group_size: adaptive_fee_tier.tick_group_size,
         major_swap_threshold_ticks: adaptive_fee_tier.major_swap_threshold_ticks,
     }
+}
+
+fn is_already_initialized_dynamic_tick_array(
+    writable_account_snapshot: &WritableAccountSnapshot,
+    pubkey: &PubkeyString,
+) -> bool {
+    writable_account_snapshot.pre_snapshot.contains_key(pubkey)
 }

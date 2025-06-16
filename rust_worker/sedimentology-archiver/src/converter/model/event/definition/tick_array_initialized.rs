@@ -21,4 +21,6 @@ pub struct TickArrayInitializedEventPayload {
 pub enum TickArrayInitializedEventOrigin {
     #[serde(rename = "ita")]
     InitializeTickArray,
+    #[serde(rename = "idta")]
+    InitializeDynamicTickArray,
 }
