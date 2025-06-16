@@ -284,6 +284,7 @@ export async function fetchAndProcessBlock(database: Connection, solana: AxiosIn
         case "setDefaultBaseFeeRate":
         case "setFeeRateByDelegatedFeeAuthority":
         case "setPresetAdaptiveFeeConstants":
+        case "initializeDynamicTickArray":
           // This instruction does not affect the token balance.
           break;
         default:
@@ -1518,6 +1519,20 @@ async function insertInstruction(txid: bigint, order: number, ix: DecodedWhirlpo
         ix.accounts.whirlpoolsConfig,
         ix.accounts.adaptiveFeeTier,
         ix.accounts.feeAuthority,
+        // no transfer
+      ]);
+    case "initializeDynamicTickArray":
+      return database.query(buildSQL(ix.name, 2, 4, 0), [
+        txid,
+        order,
+        // data
+        ix.data.startTickIndex,
+        ix.data.idempotent,
+        // key
+        ix.accounts.whirlpool,
+        ix.accounts.funder,
+        ix.accounts.tickArray,
+        ix.accounts.systemProgram,
         // no transfer
       ]);
     default:

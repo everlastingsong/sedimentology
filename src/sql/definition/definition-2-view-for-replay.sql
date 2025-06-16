@@ -1250,6 +1250,21 @@ SELECT
     ) AS "payload"
 FROM ixsSetPresetAdaptiveFeeConstants t;
 
+CREATE OR REPLACE VIEW vwJsonIxsInitializeDynamicTickArray AS
+SELECT
+    t.txid,
+    t.order,
+    "initializeDynamicTickArray" AS "ix",
+    JSON_OBJECT(
+        'dataStartTickIndex', t.dataStartTickIndex,
+        'dataIdempotent', t.dataIdempotent,
+        'keyWhirlpool', toPubkeyBase58(t.keyWhirlpool),
+        'keyFunder', toPubkeyBase58(t.keyFunder),
+        'keyTickArray', toPubkeyBase58(t.keyTickArray),
+        'keySystemProgram', toPubkeyBase58(t.keySystemProgram)
+    ) AS "payload"
+FROM ixsInitializeDynamicTickArray t;
+
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
 /*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
