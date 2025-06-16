@@ -1059,6 +1059,18 @@ CREATE TABLE `ixsSetPresetAdaptiveFeeConstants` (
   PRIMARY KEY (`txid`,`order`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
+CREATE TABLE `ixsInitializeDynamicTickArray` (
+  `txid` bigint(11) unsigned NOT NULL,
+  `order` tinyint(11) unsigned NOT NULL,
+  `dataStartTickIndex` int(11) NOT NULL COMMENT 'i32',
+  `dataIdempotent` tinyint(1) unsigned NOT NULL COMMENT 'boolean',
+  `keyWhirlpool` int(11) unsigned NOT NULL,
+  `keyFunder` int(11) unsigned NOT NULL,
+  `keyTickArray` int(11) unsigned NOT NULL,
+  `keySystemProgram` int(11) unsigned NOT NULL,
+  PRIMARY KEY (`txid`,`order`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+
 --
 -- PROCEDURE
 --
