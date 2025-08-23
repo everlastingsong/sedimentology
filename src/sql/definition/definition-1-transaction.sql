@@ -1071,6 +1071,34 @@ CREATE TABLE `ixsInitializeDynamicTickArray` (
   PRIMARY KEY (`txid`,`order`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
+CREATE TABLE `ixsSetConfigFeatureFlag` (
+  `txid` bigint(11) unsigned NOT NULL,
+  `order` tinyint(11) unsigned NOT NULL,
+  `dataFeatureFlag` JSON NOT NULL COMMENT 'ConfigFeatureFlag enum',
+  `keyWhirlpoolsConfig` int(11) unsigned NOT NULL,
+  `keyAuthority` int(11) unsigned NOT NULL,
+  PRIMARY KEY (`txid`,`order`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+
+CREATE TABLE `ixsSetTokenBadgeAttribute` (
+  `txid` bigint(11) unsigned NOT NULL,
+  `order` tinyint(11) unsigned NOT NULL,
+  `dataAttribute` JSON NOT NULL COMMENT 'TokenBadgeAttribute enum',
+  `keyWhirlpoolsConfig` int(11) unsigned NOT NULL,
+  `keyWhirlpoolsConfigExtension` int(11) unsigned NOT NULL,
+  `keyTokenBadgeAuthority` int(11) unsigned NOT NULL,
+  `keyTokenMint` int(11) unsigned NOT NULL,
+  `keyTokenBadge` int(11) unsigned NOT NULL,
+  PRIMARY KEY (`txid`,`order`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+
+CREATE TABLE `ixsMigrateRepurposeRewardAuthoritySpace` (
+  `txid` bigint(11) unsigned NOT NULL,
+  `order` tinyint(11) unsigned NOT NULL,
+  `keyWhirlpool` int(11) unsigned NOT NULL,
+  PRIMARY KEY (`txid`,`order`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+
 --
 -- PROCEDURE
 --

@@ -213,6 +213,9 @@ pub fn fetch_instructions_in_slot(slot: u64, database: &mut PooledConn) -> Vec<I
           UNION ALL SELECT * FROM vwJsonIxsSetFeeRateByDelegatedFeeAuthority WHERE txid BETWEEN :s and :e
           UNION ALL SELECT * FROM vwJsonIxsSetPresetAdaptiveFeeConstants WHERE txid BETWEEN :s and :e
           UNION ALL SELECT * FROM vwJsonIxsInitializeDynamicTickArray WHERE txid BETWEEN :s and :e
+          UNION ALL SELECT * FROM vwJsonIxsSetConfigFeatureFlag WHERE txid BETWEEN :s and :e
+          UNION ALL SELECT * FROM vwJsonIxsSetTokenBadgeAttribute WHERE txid BETWEEN :s and :e
+          UNION ALL SELECT * FROM vwJsonIxsMigrateRepurposeRewardAuthoritySpace WHERE txid BETWEEN :s and :e
           ",
           // no ORDER BY clause, sort at the client side
       params! {

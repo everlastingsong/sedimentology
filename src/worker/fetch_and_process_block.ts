@@ -285,6 +285,9 @@ export async function fetchAndProcessBlock(database: Connection, solana: AxiosIn
         case "setFeeRateByDelegatedFeeAuthority":
         case "setPresetAdaptiveFeeConstants":
         case "initializeDynamicTickArray":
+        case "setConfigFeatureFlag":
+        case "setTokenBadgeAttribute":
+        case "migrateRepurposeRewardAuthoritySpace":
           // This instruction does not affect the token balance.
           break;
         default:
@@ -1533,6 +1536,40 @@ async function insertInstruction(txid: bigint, order: number, ix: DecodedWhirlpo
         ix.accounts.funder,
         ix.accounts.tickArray,
         ix.accounts.systemProgram,
+        // no transfer
+      ]);
+    case "setConfigFeatureFlag":
+      return database.query(buildSQL(ix.name, 1, 2, 0), [
+        txid,
+        order,
+        // data
+        JSON.stringify(ix.data.featureFlag),
+        // key
+        ix.accounts.whirlpoolsConfig,
+        ix.accounts.authority,
+        // no transfer
+      ]);
+    case "setTokenBadgeAttribute":
+      return database.query(buildSQL(ix.name, 1, 5, 0), [
+        txid,
+        order,
+        // data
+        JSON.stringify(ix.data.attribute),
+        // key
+        ix.accounts.whirlpoolsConfig,
+        ix.accounts.whirlpoolsConfigExtension,
+        ix.accounts.tokenBadgeAuthority,
+        ix.accounts.tokenMint,
+        ix.accounts.tokenBadge,
+        // no transfer
+      ]);
+    case "migrateRepurposeRewardAuthoritySpace":
+      return database.query(buildSQL(ix.name, 0, 1, 0), [
+        txid,
+        order,
+        // no data
+        // key
+        ix.accounts.whirlpool,
         // no transfer
       ]);
     default:
