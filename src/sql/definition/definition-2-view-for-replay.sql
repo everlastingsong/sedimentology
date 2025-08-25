@@ -1265,6 +1265,43 @@ SELECT
     ) AS "payload"
 FROM ixsInitializeDynamicTickArray t;
 
+CREATE OR REPLACE VIEW vwJsonIxsSetConfigFeatureFlag AS
+SELECT
+    t.txid,
+    t.order,
+    "setConfigFeatureFlag" AS "ix",
+    JSON_OBJECT(
+        'dataFeatureFlag', t.dataFeatureFlag,
+        'keyWhirlpoolsConfig', toPubkeyBase58(t.keyWhirlpoolsConfig),
+        'keyAuthority', toPubkeyBase58(t.keyAuthority)
+    ) AS "payload"
+FROM ixsSetConfigFeatureFlag t;
+
+CREATE OR REPLACE VIEW vwJsonIxsSetTokenBadgeAttribute AS
+SELECT
+    t.txid,
+    t.order,
+    "setTokenBadgeAttribute" AS "ix",
+    JSON_OBJECT(
+        'dataAttribute', t.dataAttribute,
+        'keyWhirlpoolsConfig', toPubkeyBase58(t.keyWhirlpoolsConfig),
+        'keyWhirlpoolsConfigExtension', toPubkeyBase58(t.keyWhirlpoolsConfigExtension),
+        'keyTokenBadgeAuthority', toPubkeyBase58(t.keyTokenBadgeAuthority),
+        'keyTokenMint', toPubkeyBase58(t.keyTokenMint),
+        'keyTokenBadge', toPubkeyBase58(t.keyTokenBadge)
+    ) AS "payload"
+FROM ixsSetTokenBadgeAttribute t;
+
+CREATE OR REPLACE VIEW vwJsonIxsMigrateRepurposeRewardAuthoritySpace AS
+SELECT
+    t.txid,
+    t.order,
+    "migrateRepurposeRewardAuthoritySpace" AS "ix",
+    JSON_OBJECT(
+        'keyWhirlpool', toPubkeyBase58(t.keyWhirlpool)
+    ) AS "payload"
+FROM ixsMigrateRepurposeRewardAuthoritySpace t;
+
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
 /*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;

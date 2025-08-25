@@ -31,6 +31,7 @@ impl WhirlpoolEventGroup {
                     | WhirlpoolEvent::AdaptiveFeeTierUpdated(_)
                     | WhirlpoolEvent::TokenBadgeInitialized(_)
                     | WhirlpoolEvent::TokenBadgeDeleted(_)
+                    | WhirlpoolEvent::TokenBadgeUpdated(_)
                     | WhirlpoolEvent::TickArrayInitialized(_)
                     | WhirlpoolEvent::RewardInitialized(_)
                     | WhirlpoolEvent::RewardEmissionsUpdated(_)

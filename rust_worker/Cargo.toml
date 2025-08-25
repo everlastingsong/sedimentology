@@ -12,12 +12,12 @@ version = "0.0.1"
 edition = "2021"
 
 [workspace.dependencies]
-replay-engine = { git = "https://github.com/orca-so/whirlpool-tx-replayer", tag = "v0.1.11", package = "replay-engine" }
-whirlpool-replayer = { git = "https://github.com/orca-so/whirlpool-tx-replayer", tag = "v0.1.11", package = "whirlpool-replayer" }
+replay-engine = { git = "https://github.com/orca-so/whirlpool-tx-replayer", tag = "v0.1.12", package = "replay-engine" }
+whirlpool-replayer = { git = "https://github.com/orca-so/whirlpool-tx-replayer", tag = "v0.1.12", package = "whirlpool-replayer" }
 #replay-engine = { git = "https://github.com/orca-so/whirlpool-tx-replayer", branch = "yugure/adaptive-fee-step1", package = "replay-engine" }
 #whirlpool-replayer = { git = "https://github.com/orca-so/whirlpool-tx-replayer", branch = "yugure/adaptive-fee-step1", package = "whirlpool-replayer" }
 
-whirlpool_base = { git = "https://github.com/orca-so/whirlpools", branch = "yugure/for-replayer-20250616", package = "whirlpool" }
+whirlpool_base = { git = "https://github.com/orca-so/whirlpools", branch = "yugure/for-replayer-20250824", package = "whirlpool" }
 
 mysql = { version = "24.0.0", default-features = false, features = ["default-rustls"] }
 clap = { version = "4.4.11", features = ["derive"] }

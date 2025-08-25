@@ -29,6 +29,11 @@ pub struct ConfigUpdatedEventPayload {
     pub old_default_protocol_fee_rate: u16,
     #[serde(rename = "ndpfr")]
     pub new_default_protocol_fee_rate: u16,
+
+    #[serde(rename = "off")]
+    pub old_feature_flags: u16,
+    #[serde(rename = "nof")]
+    pub new_feature_flags: u16,
 }
 
 #[allow(clippy::enum_variant_names)]
@@ -42,4 +47,6 @@ pub enum ConfigUpdatedEventOrigin {
     SetRewardEmissionsSuperAuthority,
     #[serde(rename = "sdpfr")]
     SetDefaultProtocolFeeRate,
+    #[serde(rename = "scff")]
+    SetConfigFeatureFlag,
 }
