@@ -150,8 +150,12 @@ pub enum WhirlpoolEvent {
     TokenBadgeInitialized(TokenBadgeInitializedEventPayload),
     #[serde(rename = "TBD")]
     TokenBadgeDeleted(TokenBadgeDeletedEventPayload),
+    #[serde(rename = "TBU")]
+    TokenBadgeUpdated(TokenBadgeUpdatedEventPayload),
 
     // Patch
     #[serde(rename = "LP")]
     LiquidityPatched(LiquidityPatchedEventPayload),
+    #[serde(rename = "PM")]
+    PoolMigrated(PoolMigratedEventPayload),
 }

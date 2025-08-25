@@ -12,7 +12,7 @@ use super::{definition::*, WhirlpoolEvent};
 use anchor_lang::prelude::*;
 use whirlpool_base::{
     math::sqrt_price_from_tick_index,
-    state::{FeeTier, AdaptiveFeeTier, Oracle, LockConfig, Position, Whirlpool, WhirlpoolsConfig, WhirlpoolsConfigExtension},
+    state::{AdaptiveFeeTier, FeeTier, LockConfig, Oracle, Position, TokenBadge, Whirlpool, WhirlpoolsConfig, WhirlpoolsConfigExtension},
 };
 
 pub fn build_whirlpool_events(
@@ -1367,6 +1367,17 @@ pub fn build_whirlpool_events(
             ));
         }
         ////////////////////////////////////////////////////////////////////////////////
+        // PoolMigrated: MigrateRepurposeRewardAuthoritySpace
+        ////////////////////////////////////////////////////////////////////////////////
+        DecodedWhirlpoolInstruction::MigrateRepurposeRewardAuthoritySpace(params) => {
+            events.push(WhirlpoolEvent::PoolMigrated(
+                PoolMigratedEventPayload {
+                    origin: PoolMigratedEventOrigin::MigrateRepurposeRewardAuthoritySpace,
+                    whirlpool: params.key_whirlpool.clone(),
+                },
+            ));
+        }
+        ////////////////////////////////////////////////////////////////////////////////
         // TickArrayInitialized: InitializeTickArray, InitializeDynamicTickArray
         ////////////////////////////////////////////////////////////////////////////////
         DecodedWhirlpoolInstruction::InitializeTickArray(params) => {
@@ -1411,7 +1422,7 @@ pub fn build_whirlpool_events(
             ));
         }
         ////////////////////////////////////////////////////////////////////////////////
-        // ConfigUpdated: SetCollectProtocolFeesAuthority, SetDefaultProtocolFeeRate, SetFeeAuthority, SetRewardEmissionsSuperAuthority
+        // ConfigUpdated: SetCollectProtocolFeesAuthority, SetDefaultProtocolFeeRate, SetFeeAuthority, SetRewardEmissionsSuperAuthority, SetConfigFeatureFlag
         ////////////////////////////////////////////////////////////////////////////////
         DecodedWhirlpoolInstruction::SetCollectProtocolFeesAuthority(params) => {
             let old_config =
@@ -1429,6 +1440,7 @@ pub fn build_whirlpool_events(
                     .reward_emissions_super_authority
                     .to_string(),
                 old_default_protocol_fee_rate: old_config.default_protocol_fee_rate,
+                old_feature_flags: old_config.feature_flags,
                 new_fee_authority: new_config.fee_authority.to_string(),
                 new_collect_protocol_fees_authority: new_config
                     .collect_protocol_fees_authority
@@ -1437,6 +1449,7 @@ pub fn build_whirlpool_events(
                     .reward_emissions_super_authority
                     .to_string(),
                 new_default_protocol_fee_rate: new_config.default_protocol_fee_rate,
+                new_feature_flags: new_config.feature_flags,
             }));
         }
         DecodedWhirlpoolInstruction::SetDefaultProtocolFeeRate(params) => {
@@ -1455,6 +1468,7 @@ pub fn build_whirlpool_events(
                     .reward_emissions_super_authority
                     .to_string(),
                 old_default_protocol_fee_rate: old_config.default_protocol_fee_rate,
+                old_feature_flags: old_config.feature_flags,
                 new_fee_authority: new_config.fee_authority.to_string(),
                 new_collect_protocol_fees_authority: new_config
                     .collect_protocol_fees_authority
@@ -1463,6 +1477,7 @@ pub fn build_whirlpool_events(
                     .reward_emissions_super_authority
                     .to_string(),
                 new_default_protocol_fee_rate: new_config.default_protocol_fee_rate,
+                new_feature_flags: new_config.feature_flags,
             }));
         }
         DecodedWhirlpoolInstruction::SetFeeAuthority(params) => {
@@ -1481,6 +1496,7 @@ pub fn build_whirlpool_events(
                     .reward_emissions_super_authority
                     .to_string(),
                 old_default_protocol_fee_rate: old_config.default_protocol_fee_rate,
+                old_feature_flags: old_config.feature_flags,
                 new_fee_authority: new_config.fee_authority.to_string(),
                 new_collect_protocol_fees_authority: new_config
                     .collect_protocol_fees_authority
@@ -1489,6 +1505,7 @@ pub fn build_whirlpool_events(
                     .reward_emissions_super_authority
                     .to_string(),
                 new_default_protocol_fee_rate: new_config.default_protocol_fee_rate,
+                new_feature_flags: new_config.feature_flags,
             }));
         }
         DecodedWhirlpoolInstruction::SetRewardEmissionsSuperAuthority(params) => {
@@ -1507,6 +1524,7 @@ pub fn build_whirlpool_events(
                     .reward_emissions_super_authority
                     .to_string(),
                 old_default_protocol_fee_rate: old_config.default_protocol_fee_rate,
+                old_feature_flags: old_config.feature_flags,
                 new_fee_authority: new_config.fee_authority.to_string(),
                 new_collect_protocol_fees_authority: new_config
                     .collect_protocol_fees_authority
@@ -1515,6 +1533,35 @@ pub fn build_whirlpool_events(
                     .reward_emissions_super_authority
                     .to_string(),
                 new_default_protocol_fee_rate: new_config.default_protocol_fee_rate,
+                new_feature_flags: new_config.feature_flags,
+            }));
+        }
+        DecodedWhirlpoolInstruction::SetConfigFeatureFlag(params) => {
+            let old_config =
+                get_old_config(writable_account_snapshot, &params.key_whirlpools_config);
+            let new_config = get_new_config(accounts, &params.key_whirlpools_config);
+
+            events.push(WhirlpoolEvent::ConfigUpdated(ConfigUpdatedEventPayload {
+                origin: ConfigUpdatedEventOrigin::SetConfigFeatureFlag,
+                config: params.key_whirlpools_config.clone(),
+                old_fee_authority: old_config.fee_authority.to_string(),
+                old_collect_protocol_fees_authority: old_config
+                    .collect_protocol_fees_authority
+                    .to_string(),
+                old_reward_emissions_super_authority: old_config
+                    .reward_emissions_super_authority
+                    .to_string(),
+                old_default_protocol_fee_rate: old_config.default_protocol_fee_rate,
+                old_feature_flags: old_config.feature_flags,
+                new_fee_authority: new_config.fee_authority.to_string(),
+                new_collect_protocol_fees_authority: new_config
+                    .collect_protocol_fees_authority
+                    .to_string(),
+                new_reward_emissions_super_authority: new_config
+                    .reward_emissions_super_authority
+                    .to_string(),
+                new_default_protocol_fee_rate: new_config.default_protocol_fee_rate,
+                new_feature_flags: new_config.feature_flags,
             }));
         }
         ////////////////////////////////////////////////////////////////////////////////
@@ -1560,12 +1607,9 @@ pub fn build_whirlpool_events(
                     origin: RewardAuthorityUpdatedEventOrigin::SetRewardAuthority,
                     whirlpool: params.key_whirlpool.clone(),
                     reward_index: params.data_reward_index,
-                    old_reward_authority: old_whirlpool.reward_infos[reward_index_usize]
-                        .authority
-                        .to_string(),
-                    new_reward_authority: new_whirlpool.reward_infos[reward_index_usize]
-                        .authority
-                        .to_string(),
+                    // TODO: we need to restrict reward_index to 0 to make it easy
+                    old_reward_authority: extension_to_pubkey_string(&old_whirlpool.reward_infos[reward_index_usize].extension),
+                    new_reward_authority: extension_to_pubkey_string(&new_whirlpool.reward_infos[reward_index_usize].extension),
                 },
             ));
         }
@@ -1579,12 +1623,9 @@ pub fn build_whirlpool_events(
                     origin: RewardAuthorityUpdatedEventOrigin::SetRewardAuthorityBySuperAuthority,
                     whirlpool: params.key_whirlpool.clone(),
                     reward_index: params.data_reward_index,
-                    old_reward_authority: old_whirlpool.reward_infos[reward_index_usize]
-                        .authority
-                        .to_string(),
-                    new_reward_authority: new_whirlpool.reward_infos[reward_index_usize]
-                        .authority
-                        .to_string(),
+                    // TODO: we need to restrict reward_index to 0 to make it easy
+                    old_reward_authority: extension_to_pubkey_string(&old_whirlpool.reward_infos[reward_index_usize].extension),
+                    new_reward_authority: extension_to_pubkey_string(&new_whirlpool.reward_infos[reward_index_usize].extension),
                 },
             ));
         }
@@ -1691,6 +1732,27 @@ pub fn build_whirlpool_events(
                     config_extension: params.key_whirlpools_config_extension.clone(),
                     token_mint: params.key_token_mint.clone(),
                     token_badge: params.key_token_badge.clone(),
+                },
+            ));
+        }
+        ////////////////////////////////////////////////////////////////////////////////
+        // TokenBadgeUpdated: SetTokenBadgeAttribute
+        ////////////////////////////////////////////////////////////////////////////////
+        DecodedWhirlpoolInstruction::SetTokenBadgeAttribute(params) => {
+            let old_token_badge =
+                get_old_token_badge(writable_account_snapshot, &params.key_token_badge);
+            let new_token_badge = get_new_token_badge(accounts, &params.key_token_badge);
+
+            events.push(WhirlpoolEvent::TokenBadgeUpdated(
+                TokenBadgeUpdatedEventPayload {
+                    origin: TokenBadgeUpdatedEventOrigin::SetTokenBadgeAttribute,
+                    config: params.key_whirlpools_config.clone(),
+                    token_mint: params.key_token_mint.clone(),
+                    token_badge: params.key_token_badge.clone(),
+                    old_attribute_require_non_transferable_position: old_token_badge
+                        .attribute_require_non_transferable_position,
+                    new_attribute_require_non_transferable_position: new_token_badge
+                        .attribute_require_non_transferable_position,
                 },
             ));
         }
@@ -2061,6 +2123,22 @@ fn get_new_lock_config(
     LockConfig::try_deserialize(&mut post_data.as_slice()).unwrap()
 }
 
+fn get_old_token_badge(
+    writable_account_snapshot: &WritableAccountSnapshot,
+    pubkey: &PubkeyString,
+) -> TokenBadge {
+    let pre_data = writable_account_snapshot.pre_snapshot.get(pubkey).unwrap();
+    TokenBadge::try_deserialize(&mut pre_data.as_slice()).unwrap()
+}
+
+fn get_new_token_badge(
+    accounts: &AccountDataStore,
+    pubkey: &PubkeyString,
+) -> TokenBadge {
+    let post_data = accounts.get(pubkey).unwrap().unwrap();
+    TokenBadge::try_deserialize(&mut post_data.as_slice()).unwrap()
+}
+
 fn tick_index_to_decimal_price(
     tick_index: i32,
     mint_a: &Pubkey,
@@ -2107,4 +2185,8 @@ fn is_already_initialized_dynamic_tick_array(
     pubkey: &PubkeyString,
 ) -> bool {
     writable_account_snapshot.pre_snapshot.contains_key(pubkey)
+}
+
+fn extension_to_pubkey_string(extension: &[u8]) -> PubkeyString {
+    bs58::encode(extension).into_string()
 }
