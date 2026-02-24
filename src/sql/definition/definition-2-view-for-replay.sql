@@ -1302,6 +1302,106 @@ SELECT
     ) AS "payload"
 FROM ixsMigrateRepurposeRewardAuthoritySpace t;
 
+CREATE OR REPLACE VIEW vwJsonIxsSetAdaptiveFeeConstants AS
+SELECT
+    t.txid,
+    t.order,
+    "setAdaptiveFeeConstants" AS "ix",
+    JSON_OBJECT(
+        'dataAdaptiveFeeConstants', t.dataAdaptiveFeeConstants,
+        'keyWhirlpool', toPubkeyBase58(t.keyWhirlpool),
+        'keyWhirlpoolsConfig', toPubkeyBase58(t.keyWhirlpoolsConfig),
+        'keyOracle', toPubkeyBase58(t.keyOracle),
+        'keyFeeAuthority', toPubkeyBase58(t.keyFeeAuthority)
+    ) AS "payload"
+FROM ixsSetAdaptiveFeeConstants t;
+
+CREATE OR REPLACE VIEW vwJsonIxsRepositionLiquidityV2 AS
+SELECT
+    t.txid,
+    t.order,
+    "repositionLiquidityV2" AS "ix",
+    JSON_OBJECT(
+        'dataNewTickLowerIndex', t.dataNewTickLowerIndex,
+        'dataNewTickUpperIndex', t.dataNewTickUpperIndex,
+        'dataMethod', t.dataMethod,
+        'keyWhirlpool', toPubkeyBase58(t.keyWhirlpool),
+        'keyTokenProgramA', toPubkeyBase58(t.keyTokenProgramA),
+        'keyTokenProgramB', toPubkeyBase58(t.keyTokenProgramB),
+        'keyMemoProgram', toPubkeyBase58(t.keyMemoProgram),
+        'keyPositionAuthority', toPubkeyBase58(t.keyPositionAuthority),
+        'keyFunder', toPubkeyBase58(t.keyFunder),
+        'keyPosition', toPubkeyBase58(t.keyPosition),
+        'keyPositionTokenAccount', toPubkeyBase58(t.keyPositionTokenAccount),
+        'keyTokenMintA', toPubkeyBase58(t.keyTokenMintA),
+        'keyTokenMintB', toPubkeyBase58(t.keyTokenMintB),
+        'keyTokenOwnerAccountA', toPubkeyBase58(t.keyTokenOwnerAccountA),
+        'keyTokenOwnerAccountB', toPubkeyBase58(t.keyTokenOwnerAccountB),
+        'keyTokenVaultA', toPubkeyBase58(t.keyTokenVaultA),
+        'keyTokenVaultB', toPubkeyBase58(t.keyTokenVaultB),
+        'keyExistingTickArrayLower', toPubkeyBase58(t.keyExistingTickArrayLower),
+        'keyExistingTickArrayUpper', toPubkeyBase58(t.keyExistingTickArrayUpper),
+        'keyNewTickArrayLower', toPubkeyBase58(t.keyNewTickArrayLower),
+        'keyNewTickArrayUpper', toPubkeyBase58(t.keyNewTickArrayUpper),
+        'keySystemProgram', toPubkeyBase58(t.keySystemProgram),
+        'auxDataIsTokenATransferFromOwner', t.auxDataIsTokenATransferFromOwner,
+        'auxDataIsTokenBTransferFromOwner', t.auxDataIsTokenBTransferFromOwner,
+        'remainingAccountsInfo', JSON_EXTRACT(decodeU8U8TupleArray(t.remainingAccountsInfo), '$'),
+        'remainingAccountsKeys', JSON_EXTRACT(decodeBase58PubkeyArray(t.remainingAccountsKeys), '$'),
+        'transfer0', JSON_OBJECT(
+            'amount', toU64String(t.transferAmount0),
+            'transferFeeConfigOpt', t.transferFeeConfigOpt0,
+            'transferFeeConfigBps', t.transferFeeConfigBps0,
+            'transferFeeConfigMax', toU64String(t.transferFeeConfigMax0)
+        ),
+        'transfer1', JSON_OBJECT(
+            'amount', toU64String(t.transferAmount1),
+            'transferFeeConfigOpt', t.transferFeeConfigOpt1,
+            'transferFeeConfigBps', t.transferFeeConfigBps1,
+            'transferFeeConfigMax', toU64String(t.transferFeeConfigMax1)
+        )
+    ) AS "payload"
+FROM ixsRepositionLiquidityV2 t;
+
+CREATE OR REPLACE VIEW vwJsonIxsIncreaseLiquidityByTokenAmountsV2 AS
+SELECT
+    t.txid,
+    t.order,
+    "increaseLiquidityByTokenAmountsV2" AS "ix",
+    JSON_OBJECT(
+        'dataMethod', t.dataMethod,
+        'keyWhirlpool', toPubkeyBase58(t.keyWhirlpool),
+        'keyTokenProgramA', toPubkeyBase58(t.keyTokenProgramA),
+        'keyTokenProgramB', toPubkeyBase58(t.keyTokenProgramB),
+        'keyMemoProgram', toPubkeyBase58(t.keyMemoProgram),
+        'keyPositionAuthority', toPubkeyBase58(t.keyPositionAuthority),
+        'keyPosition', toPubkeyBase58(t.keyPosition),
+        'keyPositionTokenAccount', toPubkeyBase58(t.keyPositionTokenAccount),
+        'keyTokenMintA', toPubkeyBase58(t.keyTokenMintA),
+        'keyTokenMintB', toPubkeyBase58(t.keyTokenMintB),
+        'keyTokenOwnerAccountA', toPubkeyBase58(t.keyTokenOwnerAccountA),
+        'keyTokenOwnerAccountB', toPubkeyBase58(t.keyTokenOwnerAccountB),
+        'keyTokenVaultA', toPubkeyBase58(t.keyTokenVaultA),
+        'keyTokenVaultB', toPubkeyBase58(t.keyTokenVaultB),
+        'keyTickArrayLower', toPubkeyBase58(t.keyTickArrayLower),
+        'keyTickArrayUpper', toPubkeyBase58(t.keyTickArrayUpper),
+        'remainingAccountsInfo', JSON_EXTRACT(decodeU8U8TupleArray(t.remainingAccountsInfo), '$'),
+        'remainingAccountsKeys', JSON_EXTRACT(decodeBase58PubkeyArray(t.remainingAccountsKeys), '$'),
+        'transfer0', JSON_OBJECT(
+            'amount', toU64String(t.transferAmount0),
+            'transferFeeConfigOpt', t.transferFeeConfigOpt0,
+            'transferFeeConfigBps', t.transferFeeConfigBps0,
+            'transferFeeConfigMax', toU64String(t.transferFeeConfigMax0)
+        ),
+        'transfer1', JSON_OBJECT(
+            'amount', toU64String(t.transferAmount1),
+            'transferFeeConfigOpt', t.transferFeeConfigOpt1,
+            'transferFeeConfigBps', t.transferFeeConfigBps1,
+            'transferFeeConfigMax', toU64String(t.transferFeeConfigMax1)
+        )
+    ) AS "payload"
+FROM ixsIncreaseLiquidityByTokenAmountsV2 t;
+
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
 /*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
