@@ -1942,6 +1942,9 @@ pub fn build_whirlpool_events(
                 },
             ));
         }
+        _ => {
+            panic!("unsupported (not implemented) instruction type");
+        }
     }
 
     events
