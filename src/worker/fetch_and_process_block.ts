@@ -164,6 +164,8 @@ export async function fetchAndProcessBlock(database: Connection, solana: AxiosIn
         case "decreaseLiquidityV2":
         case "swapV2":
         case "twoHopSwapV2":
+        case "repositionLiquidityV2":
+        case "increaseLiquidityByTokenAmountsV2":
           ix.remainingAccounts.forEach((pubkey) => touchedPubkeys.add(pubkey));
           break;
         default:
@@ -206,6 +208,8 @@ export async function fetchAndProcessBlock(database: Connection, solana: AxiosIn
         case "decreaseLiquidity":
         case "increaseLiquidityV2":
         case "decreaseLiquidityV2":
+        case "repositionLiquidityV2":
+        case "increaseLiquidityByTokenAmountsV2":
           touchedVaultPubkeys.add(ix.accounts.tokenVaultA);
           touchedVaultPubkeys.add(ix.accounts.tokenVaultB);
           break;
@@ -288,6 +292,7 @@ export async function fetchAndProcessBlock(database: Connection, solana: AxiosIn
         case "setConfigFeatureFlag":
         case "setTokenBadgeAttribute":
         case "migrateRepurposeRewardAuthoritySpace":
+        case "setAdaptiveFeeConstants":
           // This instruction does not affect the token balance.
           break;
         default:
@@ -1571,6 +1576,93 @@ async function insertInstruction(txid: bigint, order: number, ix: DecodedWhirlpo
         // key
         ix.accounts.whirlpool,
         // no transfer
+      ]);
+    case "setAdaptiveFeeConstants":
+      return database.query(buildSQL(ix.name, 1, 4, 0), [
+        txid,
+        order,
+        // data
+        JSON.stringify({
+          filterPeriod: ix.data.filterPeriod,
+          decayPeriod: ix.data.decayPeriod,
+          reductionFactor: ix.data.reductionFactor,
+          adaptiveFeeControlFactor: ix.data.adaptiveFeeControlFactor,
+          maxVolatilityAccumulator: ix.data.maxVolatilityAccumulator,
+          tickGroupSize: ix.data.tickGroupSize,
+          majorSwapThresholdTicks: ix.data.majorSwapThresholdTicks,
+        }),
+        // key
+        ix.accounts.whirlpool,
+        ix.accounts.whirlpoolsConfig,
+        ix.accounts.oracle,
+        ix.accounts.feeAuthority,
+        // no transfer
+      ]);
+    case "repositionLiquidityV2":
+      return database.query(buildV2SQL(ix.name, 5, 19, 2), [
+        txid,
+        order,
+        // data
+        ix.data.newTickLowerIndex,
+        ix.data.newTickUpperIndex,
+        JSON.stringify(ix.data.method),
+        ix.auxiliaries.isTokenATransferFromOwner,
+        ix.auxiliaries.isTokenBTransferFromOwner,
+        // key
+        ix.accounts.whirlpool,
+        ix.accounts.tokenProgramA,
+        ix.accounts.tokenProgramB,
+        ix.accounts.memoProgram,
+        ix.accounts.positionAuthority,
+        ix.accounts.funder,
+        ix.accounts.position,
+        ix.accounts.positionTokenAccount,
+        ix.accounts.tokenMintA,
+        ix.accounts.tokenMintB,
+        ix.accounts.tokenOwnerAccountA,
+        ix.accounts.tokenOwnerAccountB,
+        ix.accounts.tokenVaultA,
+        ix.accounts.tokenVaultB,
+        ix.accounts.existingTickArrayLower,
+        ix.accounts.existingTickArrayUpper,
+        ix.accounts.newTickArrayLower,
+        ix.accounts.newTickArrayUpper,
+        ix.accounts.systemProgram,
+        // remainingAccounts
+        jsonifyRemainingAccountsInfo(ix.data.remainingAccountsInfo),
+        jsonifyRemainingAccounts(ix.remainingAccounts),
+        // transfer
+        ...flattenV2Transfer(ix.transfers[0]),
+        ...flattenV2Transfer(ix.transfers[1]),
+      ]);
+    case "increaseLiquidityByTokenAmountsV2":
+      return database.query(buildV2SQL(ix.name, 1, 15, 2), [
+        txid,
+        order,
+        // data
+        JSON.stringify(ix.data.method),
+        // key
+        ix.accounts.whirlpool,
+        ix.accounts.tokenProgramA,
+        ix.accounts.tokenProgramB,
+        ix.accounts.memoProgram,
+        ix.accounts.positionAuthority,
+        ix.accounts.position,
+        ix.accounts.positionTokenAccount,
+        ix.accounts.tokenMintA,
+        ix.accounts.tokenMintB,
+        ix.accounts.tokenOwnerAccountA,
+        ix.accounts.tokenOwnerAccountB,
+        ix.accounts.tokenVaultA,
+        ix.accounts.tokenVaultB,
+        ix.accounts.tickArrayLower,
+        ix.accounts.tickArrayUpper,
+        // remainingAccounts
+        jsonifyRemainingAccountsInfo(ix.data.remainingAccountsInfo),
+        jsonifyRemainingAccounts(ix.remainingAccounts),
+        // transfer
+        ...flattenV2Transfer(ix.transfers[0]),
+        ...flattenV2Transfer(ix.transfers[1]),
       ]);
     default:
       throw new Error("unknown whirlpool instruction name");

@@ -1325,6 +1325,8 @@ SELECT
         'dataNewTickLowerIndex', t.dataNewTickLowerIndex,
         'dataNewTickUpperIndex', t.dataNewTickUpperIndex,
         'dataMethod', t.dataMethod,
+        'auxDataIsTokenATransferFromOwner', t.auxDataIsTokenATransferFromOwner,
+        'auxDataIsTokenBTransferFromOwner', t.auxDataIsTokenBTransferFromOwner,
         'keyWhirlpool', toPubkeyBase58(t.keyWhirlpool),
         'keyTokenProgramA', toPubkeyBase58(t.keyTokenProgramA),
         'keyTokenProgramB', toPubkeyBase58(t.keyTokenProgramB),
@@ -1344,8 +1346,6 @@ SELECT
         'keyNewTickArrayLower', toPubkeyBase58(t.keyNewTickArrayLower),
         'keyNewTickArrayUpper', toPubkeyBase58(t.keyNewTickArrayUpper),
         'keySystemProgram', toPubkeyBase58(t.keySystemProgram),
-        'auxDataIsTokenATransferFromOwner', t.auxDataIsTokenATransferFromOwner,
-        'auxDataIsTokenBTransferFromOwner', t.auxDataIsTokenBTransferFromOwner,
         'remainingAccountsInfo', JSON_EXTRACT(decodeU8U8TupleArray(t.remainingAccountsInfo), '$'),
         'remainingAccountsKeys', JSON_EXTRACT(decodeBase58PubkeyArray(t.remainingAccountsKeys), '$'),
         'transfer0', JSON_OBJECT(
