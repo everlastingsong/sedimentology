@@ -4,6 +4,7 @@ import { Commitment, Slot } from "../common/types";
 import { LRUCache } from "lru-cache";
 import invariant from "tiny-invariant";
 import { DecodedWhirlpoolInstruction, RemainingAccounts, RemainingAccountsInfo, TransferAmountWithTransferFeeConfig, WhirlpoolTransactionDecoder } from "@yugure-orca/whirlpool-tx-decoder";
+import { BN } from "bn.js";
 
 const WHIRLPOOL_PUBKEY = "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc";
 
@@ -448,6 +449,16 @@ async function insertInstruction(txid: bigint, order: number, ix: DecodedWhirlpo
   const jsonifyRemainingAccounts = (remainingAccounts: RemainingAccounts): string => {
     return JSON.stringify(remainingAccounts);
   };
+
+  const jsonifyEnum = (enumValue: any): string => {
+    // The original toJSON method of BN returns a number in hexadecimal string, which is not suitable for our use case.
+    // So we temporarily override the toJSON method of BN to return a decimal string.
+    const orgToJSON = BN.prototype.toJSON;
+    BN.prototype.toJSON = function() { return this.toString(10); }
+    const result = JSON.stringify(enumValue);
+    BN.prototype.toJSON = orgToJSON;
+    return result;
+  }
 
   const flattenV2Transfer = (transfer: TransferAmountWithTransferFeeConfig) => {
     return transfer.transferFeeConfig
@@ -1362,7 +1373,7 @@ async function insertInstruction(txid: bigint, order: number, ix: DecodedWhirlpo
         txid,
         order,
         // data
-        JSON.stringify(ix.data.lockType),
+        jsonifyEnum(ix.data.lockType),
         // key
         ix.accounts.funder,
         ix.accounts.positionAuthority,
@@ -1548,7 +1559,7 @@ async function insertInstruction(txid: bigint, order: number, ix: DecodedWhirlpo
         txid,
         order,
         // data
-        JSON.stringify(ix.data.featureFlag),
+        jsonifyEnum(ix.data.featureFlag),
         // key
         ix.accounts.whirlpoolsConfig,
         ix.accounts.authority,
@@ -1559,7 +1570,7 @@ async function insertInstruction(txid: bigint, order: number, ix: DecodedWhirlpo
         txid,
         order,
         // data
-        JSON.stringify(ix.data.attribute),
+        jsonifyEnum(ix.data.attribute),
         // key
         ix.accounts.whirlpoolsConfig,
         ix.accounts.whirlpoolsConfigExtension,
@@ -1583,6 +1594,7 @@ async function insertInstruction(txid: bigint, order: number, ix: DecodedWhirlpo
         order,
         // data
         JSON.stringify({
+          // all fields are safe integers (no need to use BigInt or string)
           filterPeriod: ix.data.filterPeriod,
           decayPeriod: ix.data.decayPeriod,
           reductionFactor: ix.data.reductionFactor,
@@ -1605,7 +1617,7 @@ async function insertInstruction(txid: bigint, order: number, ix: DecodedWhirlpo
         // data
         ix.data.newTickLowerIndex,
         ix.data.newTickUpperIndex,
-        JSON.stringify(ix.data.method),
+        jsonifyEnum(ix.data.method),
         ix.auxiliaries.isTokenATransferFromOwner,
         ix.auxiliaries.isTokenBTransferFromOwner,
         // key
@@ -1640,7 +1652,7 @@ async function insertInstruction(txid: bigint, order: number, ix: DecodedWhirlpo
         txid,
         order,
         // data
-        JSON.stringify(ix.data.method),
+        jsonifyEnum(ix.data.method),
         // key
         ix.accounts.whirlpool,
         ix.accounts.tokenProgramA,
