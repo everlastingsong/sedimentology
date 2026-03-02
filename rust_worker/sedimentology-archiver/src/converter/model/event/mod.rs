@@ -70,6 +70,8 @@ pub enum WhirlpoolEvent {
     LiquidityDeposited(LiquidityDepositedEventPayload),
     #[serde(rename = "LW")]
     LiquidityWithdrawn(LiquidityWithdrawnEventPayload),
+    #[serde(rename = "LR")]
+    LiquidityRepositioned(LiquidityRepositionedEventPayload),
 
     // New Pool
     #[serde(rename = "PI")]
@@ -113,11 +115,13 @@ pub enum WhirlpoolEvent {
     #[serde(rename = "PBD")]
     PositionBundleDeleted(PositionBundleDeletedEventPayload),
 
-    // Pool Fee Rate & Pool Protocol Fee Rate
+    // Pool Fee Rate & Pool Protocol Fee Rate & Pool Adaptive Fee Constants
     #[serde(rename = "PFRU")]
     PoolFeeRateUpdated(PoolFeeRateUpdatedEventPayload),
     #[serde(rename = "PPFRU")]
     PoolProtocolFeeRateUpdated(PoolProtocolFeeRateUpdatedEventPayload),
+    #[serde(rename = "PAFCU")]
+    PoolAdaptiveFeeConstantsUpdated(PoolAdaptiveFeeConstantsUpdatedEventPayload),
 
     // TickArray
     #[serde(rename = "TAI")]

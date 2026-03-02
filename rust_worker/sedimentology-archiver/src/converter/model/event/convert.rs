@@ -396,7 +396,7 @@ pub fn build_whirlpool_events(
             }));
         }
         ////////////////////////////////////////////////////////////////////////////////
-        // LiquidityDeposited: IncreaseLiquidity, IncreaseLiquidityV2
+        // LiquidityDeposited: IncreaseLiquidity, IncreaseLiquidityV2, IncreaseLiquidityByTokenAmountsV2
         ////////////////////////////////////////////////////////////////////////////////
         DecodedWhirlpoolInstruction::IncreaseLiquidity(params) => {
             let old_position = get_old_position(writable_account_snapshot, &params.key_position);
@@ -462,6 +462,62 @@ pub fn build_whirlpool_events(
                 LiquidityDepositedEventPayload {
                     origin: LiquidityDepositedEventOrigin::IncreaseLiquidityV2,
                     liquidity_delta: params.data_liquidity_amount,
+                    whirlpool: params.key_whirlpool.clone(),
+                    position_authority: params.key_position_authority.clone(),
+                    position: params.key_position.clone(),
+                    lower_tick_array: params.key_tick_array_lower.clone(),
+                    upper_tick_array: params.key_tick_array_upper.clone(),
+                    lower_tick_index: old_position.tick_lower_index,
+                    upper_tick_index: old_position.tick_upper_index,
+                    lower_decimal_price: tick_index_to_decimal_price(
+                        old_position.tick_lower_index,
+                        &old_whirlpool.token_mint_a,
+                        &old_whirlpool.token_mint_b,
+                        decimals,
+                    ),
+                    upper_decimal_price: tick_index_to_decimal_price(
+                        old_position.tick_upper_index,
+                        &old_whirlpool.token_mint_a,
+                        &old_whirlpool.token_mint_b,
+                        decimals,
+                    ),
+                    old_position_liquidity: old_position.liquidity,
+                    new_position_liquidity: new_position.liquidity,
+                    transfer_a: from_v2_transfer(
+                        &params.transfer_0,
+                        &new_whirlpool.token_mint_a,
+                        decimals,
+                    ),
+                    transfer_b: from_v2_transfer(
+                        &params.transfer_1,
+                        &new_whirlpool.token_mint_b,
+                        decimals,
+                    ),
+                    old_whirlpool_liquidity: old_whirlpool.liquidity,
+                    new_whirlpool_liquidity: new_whirlpool.liquidity,
+                    whirlpool_sqrt_price: new_whirlpool.sqrt_price,
+                    whirlpool_current_tick_index: new_whirlpool.tick_current_index,
+                    whirlpool_decimal_price: sqrt_price_to_decimal_price(
+                        new_whirlpool.sqrt_price,
+                        &new_whirlpool.token_mint_a,
+                        &new_whirlpool.token_mint_b,
+                        decimals,
+                    ),
+                },
+            ));
+        }
+        DecodedWhirlpoolInstruction::IncreaseLiquidityByTokenAmountsV2(params) => {
+            let old_position = get_old_position(writable_account_snapshot, &params.key_position);
+            let new_position = get_new_position(accounts, &params.key_position);
+            let old_whirlpool = get_old_whirlpool(writable_account_snapshot, &params.key_whirlpool);
+            let new_whirlpool = get_new_whirlpool(accounts, &params.key_whirlpool);
+
+            let liquidity_delta = new_position.liquidity.checked_sub(old_position.liquidity).unwrap();
+
+            events.push(WhirlpoolEvent::LiquidityDeposited(
+                LiquidityDepositedEventPayload {
+                    origin: LiquidityDepositedEventOrigin::IncreaseLiquidityByTokenAmountsV2,
+                    liquidity_delta,
                     whirlpool: params.key_whirlpool.clone(),
                     position_authority: params.key_position_authority.clone(),
                     position: params.key_position.clone(),
@@ -604,6 +660,81 @@ pub fn build_whirlpool_events(
                         &new_whirlpool.token_mint_b,
                         decimals,
                     ),
+                    old_whirlpool_liquidity: old_whirlpool.liquidity,
+                    new_whirlpool_liquidity: new_whirlpool.liquidity,
+                    whirlpool_sqrt_price: new_whirlpool.sqrt_price,
+                    whirlpool_current_tick_index: new_whirlpool.tick_current_index,
+                    whirlpool_decimal_price: sqrt_price_to_decimal_price(
+                        new_whirlpool.sqrt_price,
+                        &new_whirlpool.token_mint_a,
+                        &new_whirlpool.token_mint_b,
+                        decimals,
+                    ),
+                },
+            ));
+        }
+
+        ////////////////////////////////////////////////////////////////////////////////
+        // LiquidityRepositioned: RepositionLiquidityV2
+        ////////////////////////////////////////////////////////////////////////////////
+        DecodedWhirlpoolInstruction::RepositionLiquidityV2(params) => {
+            let old_position = get_old_position(writable_account_snapshot, &params.key_position);
+            let new_position = get_new_position(accounts, &params.key_position);
+            let old_whirlpool = get_old_whirlpool(writable_account_snapshot, &params.key_whirlpool);
+            let new_whirlpool = get_new_whirlpool(accounts, &params.key_whirlpool);
+
+            events.push(WhirlpoolEvent::LiquidityRepositioned(
+                LiquidityRepositionedEventPayload {
+                    origin: LiquidityRepositionedEventOrigin::RepositionLiquidityV2,
+                    whirlpool: params.key_whirlpool.clone(),
+                    position_authority: params.key_position_authority.clone(),
+                    position: params.key_position.clone(),
+                    old_lower_tick_array: params.key_existing_tick_array_lower.clone(),
+                    old_upper_tick_array: params.key_existing_tick_array_upper.clone(),
+                    new_lower_tick_array: params.key_new_tick_array_lower.clone(),
+                    new_upper_tick_array: params.key_new_tick_array_upper.clone(),
+                    old_lower_tick_index: old_position.tick_lower_index,
+                    old_upper_tick_index: old_position.tick_upper_index,
+                    old_lower_decimal_price: tick_index_to_decimal_price(
+                        old_position.tick_lower_index,
+                        &old_whirlpool.token_mint_a,
+                        &old_whirlpool.token_mint_b,
+                        decimals,
+                    ),
+                    old_upper_decimal_price: tick_index_to_decimal_price(
+                        old_position.tick_upper_index,
+                        &old_whirlpool.token_mint_a,
+                        &old_whirlpool.token_mint_b,
+                        decimals,
+                    ),
+                    new_lower_tick_index: new_position.tick_lower_index,
+                    new_upper_tick_index: new_position.tick_upper_index,
+                    new_lower_decimal_price: tick_index_to_decimal_price(
+                        new_position.tick_lower_index,
+                        &old_whirlpool.token_mint_a,
+                        &old_whirlpool.token_mint_b,
+                        decimals,
+                    ),
+                    new_upper_decimal_price: tick_index_to_decimal_price(
+                        new_position.tick_upper_index,
+                        &old_whirlpool.token_mint_a,
+                        &old_whirlpool.token_mint_b,
+                        decimals,
+                    ),
+                    old_position_liquidity: old_position.liquidity,
+                    new_position_liquidity: new_position.liquidity,
+                    transfer_a: from_v2_transfer(
+                        &params.transfer_0,
+                        &new_whirlpool.token_mint_a,
+                        decimals,
+                    ),
+                    transfer_from_owner_a: params.aux_data_is_token_a_transfer_from_owner,
+                    transfer_b: from_v2_transfer(
+                        &params.transfer_1,
+                        &new_whirlpool.token_mint_b,
+                        decimals,
+                    ),
+                    transfer_from_owner_b: params.aux_data_is_token_b_transfer_from_owner,
                     old_whirlpool_liquidity: old_whirlpool.liquidity,
                     new_whirlpool_liquidity: new_whirlpool.liquidity,
                     whirlpool_sqrt_price: new_whirlpool.sqrt_price,
@@ -951,20 +1082,24 @@ pub fn build_whirlpool_events(
         DecodedWhirlpoolInstruction::OpenPosition(params) => {
             let new_whirlpool = get_new_whirlpool(accounts, &params.key_whirlpool);
 
+            let new_position = get_new_position(accounts, &params.key_position);
+            let lower_tick_index = new_position.tick_lower_index;
+            let upper_tick_index = new_position.tick_upper_index;
+
             events.push(WhirlpoolEvent::PositionOpened(PositionOpenedEventPayload {
                 origin: PositionOpenedEventOrigin::OpenPosition,
                 whirlpool: params.key_whirlpool.clone(),
                 position: params.key_position.clone(),
-                lower_tick_index: params.data_tick_lower_index,
-                upper_tick_index: params.data_tick_upper_index,
+                lower_tick_index,
+                upper_tick_index,
                 lower_decimal_price: tick_index_to_decimal_price(
-                    params.data_tick_lower_index,
+                    lower_tick_index,
                     &new_whirlpool.token_mint_a,
                     &new_whirlpool.token_mint_b,
                     decimals,
                 ),
                 upper_decimal_price: tick_index_to_decimal_price(
-                    params.data_tick_upper_index,
+                    upper_tick_index,
                     &new_whirlpool.token_mint_a,
                     &new_whirlpool.token_mint_b,
                     decimals,
@@ -980,20 +1115,24 @@ pub fn build_whirlpool_events(
         DecodedWhirlpoolInstruction::OpenPositionWithMetadata(params) => {
             let new_whirlpool = get_new_whirlpool(accounts, &params.key_whirlpool);
 
+            let new_position = get_new_position(accounts, &params.key_position);
+            let lower_tick_index = new_position.tick_lower_index;
+            let upper_tick_index = new_position.tick_upper_index;
+
             events.push(WhirlpoolEvent::PositionOpened(PositionOpenedEventPayload {
                 origin: PositionOpenedEventOrigin::OpenPositionWithMetadata,
                 whirlpool: params.key_whirlpool.clone(),
                 position: params.key_position.clone(),
-                lower_tick_index: params.data_tick_lower_index,
-                upper_tick_index: params.data_tick_upper_index,
+                lower_tick_index,
+                upper_tick_index,
                 lower_decimal_price: tick_index_to_decimal_price(
-                    params.data_tick_lower_index,
+                    lower_tick_index,
                     &new_whirlpool.token_mint_a,
                     &new_whirlpool.token_mint_b,
                     decimals,
                 ),
                 upper_decimal_price: tick_index_to_decimal_price(
-                    params.data_tick_upper_index,
+                    upper_tick_index,
                     &new_whirlpool.token_mint_a,
                     &new_whirlpool.token_mint_b,
                     decimals,
@@ -1008,22 +1147,25 @@ pub fn build_whirlpool_events(
         }
         DecodedWhirlpoolInstruction::OpenBundledPosition(params) => {
             let new_whirlpool = get_new_whirlpool(accounts, &params.key_whirlpool);
+
             let new_position = get_new_position(accounts, &params.key_bundled_position);
+            let lower_tick_index = new_position.tick_lower_index;
+            let upper_tick_index = new_position.tick_upper_index;
 
             events.push(WhirlpoolEvent::PositionOpened(PositionOpenedEventPayload {
                 origin: PositionOpenedEventOrigin::OpenBundledPosition,
                 whirlpool: params.key_whirlpool.clone(),
                 position: params.key_bundled_position.clone(),
-                lower_tick_index: params.data_tick_lower_index,
-                upper_tick_index: params.data_tick_upper_index,
+                lower_tick_index,
+                upper_tick_index,
                 lower_decimal_price: tick_index_to_decimal_price(
-                    params.data_tick_lower_index,
+                    lower_tick_index,
                     &new_whirlpool.token_mint_a,
                     &new_whirlpool.token_mint_b,
                     decimals,
                 ),
                 upper_decimal_price: tick_index_to_decimal_price(
-                    params.data_tick_upper_index,
+                    upper_tick_index,
                     &new_whirlpool.token_mint_a,
                     &new_whirlpool.token_mint_b,
                     decimals,
@@ -1039,20 +1181,24 @@ pub fn build_whirlpool_events(
         DecodedWhirlpoolInstruction::OpenPositionWithTokenExtensions(params) => {
             let new_whirlpool = get_new_whirlpool(accounts, &params.key_whirlpool);
 
+            let new_position = get_new_position(accounts, &params.key_position);
+            let lower_tick_index = new_position.tick_lower_index;
+            let upper_tick_index = new_position.tick_upper_index;
+
             events.push(WhirlpoolEvent::PositionOpened(PositionOpenedEventPayload {
                 origin: PositionOpenedEventOrigin::OpenPositionWithTokenExtensions,
                 whirlpool: params.key_whirlpool.clone(),
                 position: params.key_position.clone(),
-                lower_tick_index: params.data_tick_lower_index,
-                upper_tick_index: params.data_tick_upper_index,
+                lower_tick_index,
+                upper_tick_index,
                 lower_decimal_price: tick_index_to_decimal_price(
-                    params.data_tick_lower_index,
+                    lower_tick_index,
                     &new_whirlpool.token_mint_a,
                     &new_whirlpool.token_mint_b,
                     decimals,
                 ),
                 upper_decimal_price: tick_index_to_decimal_price(
-                    params.data_tick_upper_index,
+                    upper_tick_index,
                     &new_whirlpool.token_mint_a,
                     &new_whirlpool.token_mint_b,
                     decimals,
@@ -1926,6 +2072,35 @@ pub fn build_whirlpool_events(
             ));
         }
         ////////////////////////////////////////////////////////////////////////////////
+        // PoolAdaptiveFeeConstantsUpdated: SetAdaptiveFeeConstants
+        ////////////////////////////////////////////////////////////////////////////////
+        DecodedWhirlpoolInstruction::SetAdaptiveFeeConstants(params) => {
+            let old_oracle = get_old_oracle(writable_account_snapshot, &params.key_oracle);
+            let new_oracle = get_new_oracle(accounts, &params.key_oracle);
+
+            events.push(WhirlpoolEvent::PoolAdaptiveFeeConstantsUpdated(
+                PoolAdaptiveFeeConstantsUpdatedEventPayload {
+                    origin: PoolAdaptiveFeeConstantsUpdatedEventOrigin::SetAdaptiveFeeConstants,
+                    config: params.key_whirlpools_config.clone(),
+                    whirlpool: params.key_whirlpool.clone(),
+                    old_filter_period: old_oracle.adaptive_fee_constants.filter_period,
+                    new_filter_period: new_oracle.adaptive_fee_constants.filter_period,
+                    old_decay_period: old_oracle.adaptive_fee_constants.decay_period,
+                    new_decay_period: new_oracle.adaptive_fee_constants.decay_period,
+                    old_reduction_factor: old_oracle.adaptive_fee_constants.reduction_factor,
+                    new_reduction_factor: new_oracle.adaptive_fee_constants.reduction_factor,
+                    old_adaptive_fee_control_factor: old_oracle.adaptive_fee_constants.adaptive_fee_control_factor,
+                    new_adaptive_fee_control_factor: new_oracle.adaptive_fee_constants.adaptive_fee_control_factor,
+                    old_max_volatility_accumulator: old_oracle.adaptive_fee_constants.max_volatility_accumulator,
+                    new_max_volatility_accumulator: new_oracle.adaptive_fee_constants.max_volatility_accumulator,
+                    old_tick_group_size: old_oracle.adaptive_fee_constants.tick_group_size,
+                    new_tick_group_size: new_oracle.adaptive_fee_constants.tick_group_size,
+                    old_major_swap_threshold_ticks: old_oracle.adaptive_fee_constants.major_swap_threshold_ticks,
+                    new_major_swap_threshold_ticks: new_oracle.adaptive_fee_constants.major_swap_threshold_ticks,
+                }
+            ));
+        }
+        ////////////////////////////////////////////////////////////////////////////////
         // LiquidityPatched: AdminIncreaseLiquidity
         ////////////////////////////////////////////////////////////////////////////////
         DecodedWhirlpoolInstruction::AdminIncreaseLiquidity(params) => {
@@ -1942,9 +2117,9 @@ pub fn build_whirlpool_events(
                 },
             ));
         }
-        _ => {
-            panic!("unsupported (not implemented) instruction type");
-        }
+        //_ => {
+        //    panic!("unsupported (not implemented) instruction type");
+        //}
     }
 
     events
