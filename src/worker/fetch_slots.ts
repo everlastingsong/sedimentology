@@ -46,6 +46,8 @@ export async function fetchSlots(database: Connection, solana: AxiosInstance, li
   const newSlots = slots.map((slot, delta) => ({ slot, blockHeight: latestBlockHeight + delta })).slice(1);
   const newLatestSlot = newSlots[newSlots.length - 1];
 
+  console.debug("latestBlockSlot", latestBlockSlot, "newLatestSlot", newLatestSlot);
+
   await database.beginTransaction();
   await database.query("UPDATE admState SET latestBlockSlot = ?, latestBlockHeight = ? WHERE latestBlockSlot = ?", [newLatestSlot.slot, newLatestSlot.blockHeight, latestBlockSlot]);
   await database.batch("INSERT INTO admQueuedSlots (slot, blockHeight, isBackfillSlot) VALUES (?, ?, ?)", newSlots.map(s => [s.slot, s.blockHeight, false]));

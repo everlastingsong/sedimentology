@@ -1,10 +1,14 @@
 import mariadb from "mariadb";
 import axios from "axios";
-import { ConnectionOptions, Worker } from "bullmq";
+import { ConnectionOptions, delay, Worker } from "bullmq";
 import { Commitment, WorkerQueueName } from "../common/types";
 import { program } from "commander";
 import { addConnectionOptions } from "./options";
 import { fetchAndProcessBlock } from "../worker/fetch_and_process_block";
+
+const ERROR_COOLDOWN_DELAY_MS = 5_000; // 5s
+const ERROR_BURST_DELAY_MS = 10_000; // 10s
+const ERROR_BURST_THRESHOLD = 1000;
 
 async function main() {
   addConnectionOptions(program, true, true, true);
@@ -38,17 +42,30 @@ async function main() {
     method: "post",
   });
 
+  let consectiveErrors = 0;
+
   console.log("build worker...");
   const worker = new Worker<number, void>(WorkerQueueName.PROCESSOR, async (job) => {
     const slot = job.data;
+
+    // Stop processing when an error burst occurs to prevent excessive RPC credit consumption.
+    if (consectiveErrors >= ERROR_BURST_THRESHOLD) {
+      await delay(ERROR_BURST_DELAY_MS);
+      console.warn("job dropped (error burst)", slot);
+      throw new Error("Job dropped due to an error burst");
+    }
+
     console.info("job consuming...", slot);
 
     let db: mariadb.Connection | undefined;
     try {
       db = await pool.getConnection();
       await fetchAndProcessBlock(db, solana, slot, commitment);
+      consectiveErrors = 0;
     } catch (err) {
+      consectiveErrors++;
       console.error(err);
+      await delay(ERROR_COOLDOWN_DELAY_MS);
       throw err;
     } finally {
       db?.end();
