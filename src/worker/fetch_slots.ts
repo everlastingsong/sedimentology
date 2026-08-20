@@ -104,6 +104,8 @@ export async function fetchSlots(database: Connection, solana: AxiosInstance, li
         },
       ],
     },
+    // we want to obtain raw string data, so do not use any transformation
+    transformResponse: (r) => r,
   });
 
   const originalData = getBlockResponse.data as string;
