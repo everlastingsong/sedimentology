@@ -19,7 +19,7 @@ export async function fetchSlots(database: Connection, solana: AxiosInstance, li
   if (slotDelay > 0) {
     // getSlot
     // see: https://solana.com/docs/rpc/http/getslot
-    const response = await solana.request({
+    const getSlotResponse = await solana.request({
       data: {
         jsonrpc: "2.0",
         id: 1,
@@ -29,12 +29,12 @@ export async function fetchSlots(database: Connection, solana: AxiosInstance, li
         ],
       },
     });
-    if (response.data?.error) {
-      throw new Error(`getSlot failed: ${JSON.stringify(response.data.error)}`);
+    if (getSlotResponse.data?.error) {
+      throw new Error(`getSlot failed: ${JSON.stringify(getSlotResponse.data.error)}`);
     }
-    invariant(response.data?.result, "result must be truthy");
+    invariant(getSlotResponse.data?.result, "result must be truthy");
 
-    const latestSlot: number = response.data.result;
+    const latestSlot: number = getSlotResponse.data.result;
 
     invariant(latestSlot >= latestBlockSlot, "The latest slot should not be older than the ingested slot");
 
@@ -48,7 +48,7 @@ export async function fetchSlots(database: Connection, solana: AxiosInstance, li
 
   // getBlocksWithLimit
   // see: https://solana.com/docs/rpc/http/getblockswithlimit
-  const response = await solana.request({
+  const getBlocksWithLimitResponse = await solana.request({
     data: {
       jsonrpc: "2.0",
       id: 1,
@@ -61,12 +61,12 @@ export async function fetchSlots(database: Connection, solana: AxiosInstance, li
     },
   });
 
-  if (response.data?.error) {
-    throw new Error(`getBlocksWithLimit(${latestBlockSlot}, ${limit}) failed: ${JSON.stringify(response.data.error)}`);
+  if (getBlocksWithLimitResponse.data?.error) {
+    throw new Error(`getBlocksWithLimit(${latestBlockSlot}, ${limit}) failed: ${JSON.stringify(getBlocksWithLimitResponse.data.error)}`);
   }
-  invariant(response.data?.result, "result must be truthy");
+  invariant(getBlocksWithLimitResponse.data?.result, "result must be truthy");
 
-  const slots: number[] = response.data.result;
+  const slots: number[] = getBlocksWithLimitResponse.data.result;
 
   invariant(slots.length >= 1, "at least latestBlockSlot should be returned");
   invariant(slots[0] === latestBlockSlot, "first slot should be latestBlockSlot");
@@ -80,6 +80,51 @@ export async function fetchSlots(database: Connection, solana: AxiosInstance, li
   const newLatestSlot = newSlots[newSlots.length - 1];
 
   console.debug("latestBlockSlot", latestBlockSlot, "newLatestSlot", newLatestSlot);
+
+  // getBlocksWithLimit frequently returned responses with missing blocks.
+  // Validate that blockHeight matches the expected value to prevent blocks from being missed.
+
+  // getBlock
+  // see: https://solana.com/docs/rpc/http/getblock
+  const getBlockResponse = await solana.request({
+    data: {
+      jsonrpc: "2.0",
+      id: 1,
+      method: "getBlock",
+      params: [
+        newLatestSlot.slot,
+        {
+          "encoding": "json",
+          // Transaction details are not needed in this context.
+          // The response size remains limited to a small JSON payload.
+          "transactionDetails": "none",
+          "maxSupportedTransactionVersion": 0,
+          "rewards": false,
+          "commitment": commitment,
+        },
+      ],
+    },
+  });
+
+  const originalData = getBlockResponse.data as string;
+
+  // JSON.parse cannot handle numbers > Number.MAX_SAFE_INTEGER precisely,
+  // but it is okay because the ALL fields we are interested are < Number.MAX_SAFE_INTEGER or string.
+  const json = JSON.parse(originalData);
+
+  // JSON RPC ensures that error field is used when error occurs
+  if (json.error) {
+    throw new Error(`getBlock(${newLatestSlot.slot}) failed: ${JSON.stringify(json.error)}`);
+  }
+  invariant(json.result, "result must be truthy");
+
+  // sanity check
+  invariant(json.result.blockHeight, "blockHeight must exist");
+  invariant(json.result.blockTime, "blockTime must exist");
+  invariant(json.result.blockhash, "blockhash must exist");
+  invariant(json.result.parentSlot, "parentSlot must exist");
+
+  invariant(json.result.blockHeight === newLatestSlot.blockHeight, "blockHeight must match");
 
   await database.beginTransaction();
   await database.query("UPDATE admState SET latestBlockSlot = ?, latestBlockHeight = ? WHERE latestBlockSlot = ?", [newLatestSlot.slot, newLatestSlot.blockHeight, latestBlockSlot]);
