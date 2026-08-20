@@ -3,7 +3,7 @@ import { AxiosInstance } from "axios";
 import { Commitment, State } from "../common/types";
 import invariant from "tiny-invariant";
 
-export async function fetchSlots(database: Connection, solana: AxiosInstance, limit: number, maxQueuedSlots: number, commitment: Commitment) {
+export async function fetchSlots(database: Connection, solana: AxiosInstance, limit: number, maxQueuedSlots: number, slotDelay: number, commitment: Commitment) {
   const [{ count }] = await database.query('SELECT COUNT(*) as count FROM admQueuedSlots WHERE isBackfillSlot IS FALSE');
 
   if (count > maxQueuedSlots) {
@@ -13,8 +13,39 @@ export async function fetchSlots(database: Connection, solana: AxiosInstance, li
 
   const [{ latestBlockSlot, latestBlockHeight }] = await database.query<State[]>('SELECT * FROM admState');
 
+  // getBlockWithLimit frequently skipped blocks that actually existed.
+  // To account for the possibility that the state is not yet stable, delay processing until the slot is sufficiently old.
+  // Prioritize reliable operation with fewer errors over real-time processing.
+  if (slotDelay > 0) {
+    // getSlot
+    // see: https://solana.com/docs/rpc/http/getslot
+    const response = await solana.request({
+      data: {
+        jsonrpc: "2.0",
+        id: 1,
+        method: "getSlot",
+        params: [
+          { commitment: commitment },
+        ],
+      },
+    });
+    if (response.data?.error) {
+      throw new Error(`getSlot failed: ${JSON.stringify(response.data.error)}`);
+    }
+    invariant(response.data?.result, "result must be truthy");
+
+    const latestSlot: number = response.data.result;
+
+    invariant(latestSlot >= latestBlockSlot, "The latest slot should not be older than the ingested slot");
+
+    if (latestSlot < latestBlockSlot + slotDelay) {
+      console.debug(`Skipping ingestion: latestSlot=${latestSlot}, latestBlockSlot=${latestBlockSlot}, slotDelay=${slotDelay}`);
+      return;
+    }
+  }
+
   // getBlocksWithLimit
-  // see: https://docs.solana.com/api/http#getblockswithlimit
+  // see: https://solana.com/docs/rpc/http/getblockswithlimit
   const response = await solana.request({
     data: {
       jsonrpc: "2.0",
