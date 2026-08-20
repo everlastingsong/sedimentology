@@ -38,10 +38,12 @@ export async function fetchSlots(database: Connection, solana: AxiosInstance, li
 
     invariant(latestSlot >= latestBlockSlot, "The latest slot should not be older than the ingested slot");
 
-    if (latestSlot < latestBlockSlot + slotDelay) {
-      console.debug(`Skipping ingestion: latestSlot=${latestSlot}, latestBlockSlot=${latestBlockSlot}, slotDelay=${slotDelay}`);
+    const slotLag = latestSlot - latestBlockSlot;
+    if (slotLag < slotDelay) {
+      console.debug(`Skipping ingestion: latestSlot=${latestSlot}, latestBlockSlot=${latestBlockSlot}, slotLag=${slotLag}, slotDelay=${slotDelay}`);
       return;
     }
+    console.debug(`Proceeding with ingestion: latestSlot=${latestSlot}, latestBlockSlot=${latestBlockSlot}, slotLag=${slotLag}, slotDelay=${slotDelay}`);
   }
 
   // getBlocksWithLimit
