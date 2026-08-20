@@ -31,7 +31,7 @@ export async function fetchAndProcessBlock(database: Connection, solana: AxiosIn
   ////////////////////////////////////////////////////////////////////////////////
 
   // getBlock
-  // see: https://docs.solana.com/api/http#getblock
+  // see: https://solana.com/docs/rpc/http/getblock
   const response = await solana.request({
     data: {
       jsonrpc: "2.0",

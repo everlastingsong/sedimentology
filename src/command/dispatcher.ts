@@ -10,11 +10,13 @@ async function main() {
   addConnectionOptions(program, true, true, false);
   program
     .option("-i --interval <interval>", "dispatch interval (seconds)", "10")
+    .option("-s --sequencer-interval-multiplier <multiplier>", "sequencer interval multiplier", "3")
     .option("-p --processor <max>", "processor queue depth max", "1000");
 
   const options = program.parse().opts();
 
   const dispatchInterval = Number(options.interval) * 1000;
+  const sequencerIntervalMultiplier = Number(options.sequencerIntervalMultiplier);
   const processorMax = Number(options.processor);
 
   const pool = mariadb.createPool({
@@ -47,7 +49,7 @@ async function main() {
   await queueProcessor.obliterate({force: true});
 
   console.info("add repeated job...");
-  queueSequencer.add("sequencer repeated", undefined, { repeat: { every: dispatchInterval } });
+  queueSequencer.add("sequencer repeated", undefined, { repeat: { every: dispatchInterval * sequencerIntervalMultiplier } });
   queueBackfill.add("backfill repeated", undefined, { repeat: { every: dispatchInterval } });
 
   // graceful shutdown

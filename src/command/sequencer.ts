@@ -11,12 +11,14 @@ async function main() {
   program
     .option("-q --max-queued-slots <max>", "max queued slots", "10000")
     .option("-n --new-slot-per-fetch <max>", "new slots per fetch", "200")
+    .option("-d --slot-delay <delay>", "slot delay", "1000")
     .option("-C --confirmed", "commitment is confirmed");
 
   const options = program.parse().opts();
 
   const maxQueuedSlots = Number(options.maxQueuedSlots);
   const limit = Number(options.newSlotPerFetch);
+  const slotDelay = Number(options.slotDelay);
   const commitment: Commitment = options.confirmed ? "confirmed" : "finalized";
   const concurrency = 1;
 
@@ -48,7 +50,7 @@ async function main() {
     let db: mariadb.Connection | undefined;
     try {
       db = await pool.getConnection();
-      await fetchSlots(db, solana, limit, maxQueuedSlots, commitment);
+      await fetchSlots(db, solana, limit, maxQueuedSlots, slotDelay, commitment);
     } catch (err) {
       console.error(err);
       throw err;
