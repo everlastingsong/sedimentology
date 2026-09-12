@@ -42,7 +42,7 @@ export async function fetchAndProcessBlock(database: Connection, solana: AxiosIn
         {
           "encoding": "json",
           "transactionDetails": "full",
-          "maxSupportedTransactionVersion": 0,
+          "maxSupportedTransactionVersion": 1,
           // Sedimentology does not need rewards info.
           // If parameter not provided, the default includes rewards.
           // Rewards at the first slot of the epoch is extremely large (>= 150MB), and the response is sometimes broken.

@@ -98,7 +98,7 @@ export async function fetchSlots(database: Connection, solana: AxiosInstance, li
           // Transaction details are not needed in this context.
           // The response size remains limited to a small JSON payload.
           "transactionDetails": "none",
-          "maxSupportedTransactionVersion": 0,
+          "maxSupportedTransactionVersion": 1,
           "rewards": false,
           "commitment": commitment,
         },
