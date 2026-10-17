@@ -1,0 +1,1 @@
+export const SOLANA_RPC_TIMEOUT_MS = 120_000;
