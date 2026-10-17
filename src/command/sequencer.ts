@@ -1,6 +1,7 @@
 import mariadb from "mariadb";
 import axios from "axios";
 import { ConnectionOptions, Worker } from "bullmq";
+import { SOLANA_RPC_TIMEOUT_MS } from "../common/constants";
 import { Commitment, WorkerQueueName } from "../common/types";
 import { program } from "commander";
 import { addConnectionOptions } from "./options";
@@ -41,6 +42,7 @@ async function main() {
   const solana = axios.create({
     baseURL: options.solanaRpcUrl,
     method: "post",
+    timeout: SOLANA_RPC_TIMEOUT_MS,
   });
 
   console.log("build worker...");
